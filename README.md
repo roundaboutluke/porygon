@@ -17,7 +17,7 @@ I tried to heed this warning as best I could, providing min/max lon/lat config o
 # Installation
 
 1. Git clone the repo
-2. copy `config.example` to `config.json` and fill out accordingly
+2. copy `config.example` to `config.json` and fill out accordingly _(refresh interval is in seconds - you'll also need to link to your own emojis because I'm not about that upload life for something that everyone likely already has somewhere for poracle alerts or w/e) _
 3. `go build Porygon.go`
 4. `pm2 start ./Porygon --name porygon`
 
