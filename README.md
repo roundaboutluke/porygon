@@ -8,7 +8,7 @@ Porygon is a reimagining of Discordopole for Golbat, written in go with massive 
 
 **Note:** Comparitively to Discordopole the features are amazingly lackluster. This will create a simple board like so featuring daily stats, utilising both the database and API and update based on the interval you define within the config file, that's it (for now).
 
-A wise Jabes once said
+**A wise Jabes once said**
 
 
 ![image](https://i.imgur.com/ZOsk45B.png)
@@ -19,7 +19,7 @@ I tried to heed this warning as best I could, providing min/max lon/lat config o
 # Installation
 
 1. Git clone the repo
-2. copy `config.example` to `config.json` and fill out accordingly _(refresh interval is in seconds - you'll also need to link to your own emojis because I'm not about that upload life for something that everyone likely already has somewhere for poracle alerts or w/e) _
+2. copy `config.example` to `config.json` and fill out accordingly _(refresh interval is in **seconds** - you'll also need to link to your own emojis because I'm not about that upload life for something that everyone likely already has somewhere for poracle alerts or w/e)_
 3. `go build Porygon.go`
 4. `pm2 start ./Porygon --name porygon`
 
