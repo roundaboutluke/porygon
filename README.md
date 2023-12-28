@@ -1,9 +1,9 @@
 # porygon
 **_"Roughly 20 years ago, it was artificially created, utilizing the latest technology of the time."_**
 
-Porygon is a reimagining of Discordopole for Golbat, written in go with massive amounts of input from GPT-4 to help make my spagetti code even more spagetti!
+Porygon is a reimagining of Discordopole for Golbat, written in go with massive amounts of input from GPT-4 to help make my spaghetti code even more spaghetti!
 
-![image](https://github.com/roundaboutluke/porygon/assets/10819615/05672cb8-cf06-4a6d-9bfb-84b56da52645)
+![image](https://i.imgur.com/OXv3jZ3.png)
 
 
 **Note:** Comparitively to Discordopole the features are amazingly lackluster. This will create a simple board like so featuring daily stats, utilising both the database and API and update based on the interval you define within the config file, that's it (for now).
@@ -11,7 +11,7 @@ Porygon is a reimagining of Discordopole for Golbat, written in go with massive 
 A wise Jabes once said
 
 
-![image](https://github.com/roundaboutluke/porygon/assets/10819615/e750135a-d710-4228-808e-9a4d0292f517)
+![image](https://i.imgur.com/ZOsk45B.png)
 
 I tried to heed this warning as best I could, providing min/max lon/lat config options and a configurable refresh interval so you can tax your system as much or as little as you want.
 
