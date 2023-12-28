@@ -1,0 +1,43 @@
+{
+    "database": {
+        "username": "golbatdbuser",
+        "password": "golbatdbpassword",
+        "host": "127.0.0.1",
+        "port": "3306",
+        "name": "golbatdb"
+    },
+    "discord": {
+        "token": "yourdiscordbottoken",
+        "channelID": "discordchannelID",
+        "emojis": {
+            "valor": ":valor:1234567891011121314",
+            "mystic": ":mystic:1234567891011121314",
+            "instinct": ":instinct:1234567891011121314",
+            "uncontested": ":uncontested:1234567891011121314",
+            "normal": ":lure:1234567891011121314",
+            "glacial": ":glaciallure:1234567891011121314",
+            "mossy": ":mossylure:1234567891011121314",
+            "magnetic": ":magneticlure:1234567891011121314",
+            "rainy": ":rainylure:1234567891011121314",
+            "sparkly": ":sparklylure:1234567891011121314"
+        }
+    },
+    "api": {
+        "url": "http://127.0.0.1:9005",
+        "secret": "yourgolbatsecret"
+    },
+    "coordinates": {
+        "min": {
+            "latitude": 50.8,
+            "longitude": -7.6
+        },
+        "max": {
+            "latitude": 58.6,
+            "longitude": 1.8
+        }
+    },
+    "config": {
+        "refreshInterval": 60
+    },
+    "messageID": "thiswillgetreplacedautomagicallywiththeidofthemessagethebotposts"
+}
