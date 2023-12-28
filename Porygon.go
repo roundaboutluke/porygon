@@ -51,7 +51,9 @@ type Config struct {
 			Longitude float64 `json:"longitude"`
 		} `json:"max"`
 	} `json:"coordinates"`
+	Config struct {
 	RefreshInterval int `json:"refreshInterval"`
+	} `json:"config"`
 	MessageID string `json:"messageID"`
 }
 
@@ -418,7 +420,7 @@ func main() {
 			saveMessageID(&config, messageID)
 
 			db.Close()
-			time.Sleep(time.Duration(config.RefreshInterval) * time.Second)
+			time.Sleep(time.Duration(config.Config.RefreshInterval) * time.Second)
 
 		}
 	}()
