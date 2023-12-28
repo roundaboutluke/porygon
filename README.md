@@ -3,13 +3,15 @@
 
 Porygon is a reimagining of Discordopole for Golbat, written in go with massive amounts of input from GPT-4 to help make my spagetti code even more spagetti!
 
-![image](https://github.com/roundaboutluke/porygon/assets/10819615/e764e1b0-45ab-406b-be9a-f89d5f844dea)
+![image](https://github.com/roundaboutluke/porygon/assets/10819615/05672cb8-cf06-4a6d-9bfb-84b56da52645)
+
 
 **Note:** Comparitively to Discordopole the features are amazingly lackluster. This will create a simple board like so featuring daily stats, utilising both the database and API and update based on the interval you define within the config file, that's it (for now).
 
 A wise Jabes once said
 
-<img width="741" alt="Screenshot 2023-12-28 at 21 49 14" src="https://github.com/roundaboutluke/porygon/assets/10819615/0833ac98-39b2-4599-a4da-74d961c9481b">
+
+![image](https://github.com/roundaboutluke/porygon/assets/10819615/e750135a-d710-4228-808e-9a4d0292f517)
 
 I tried to heed this warning as best I could, providing min/max lon/lat config options and a configurable refresh interval so you can tax your system as much or as little as you want.
 
