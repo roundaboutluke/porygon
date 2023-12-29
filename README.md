@@ -15,6 +15,9 @@ Porygon is a reimagining of Discordopole for Golbat, written in go with massive 
 
 I tried to heed this warning as best I could, providing min/max lon/lat config options and a configurable refresh interval so you can tax your system as much or as little as you want.
 
+# Requirements
+
+[go 1.21](https://go.dev/doc/install)
 
 # Installation
 
