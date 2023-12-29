@@ -361,22 +361,22 @@ func main() {
 					{
 						Name:   "📈 Scanned",
 						Value:  fmt.Sprintf("%d", scannedCount),
-						Inline: true,
-					},
-					{
-						Name:   "✨ Shinies",
-						Value:  fmt.Sprintf("Species: %d | Total: %d", shinySpeciesCount, shinyCount),
-						Inline: true,
+						Inline: false,
 					},
 					{
 						Name:   "💯 Hundos",
 						Value:  fmt.Sprintf("Active: %d | Today: %d", hundoActiveCount, hundoCount),
-						Inline: true,
+						Inline: false,
 					},
 					{
 						Name:   "🗑️ Nundos",
 						Value:  fmt.Sprintf("Active: %d | Today: %d", nundoActiveCount, nundoCount),
-						Inline: true,
+						Inline: false,
+					},
+					{
+						Name:   "✨ Shinies",
+						Value:  fmt.Sprintf("Species: %d | Total: %d", shinySpeciesCount, shinyCount),
+						Inline: false,
 					},
 					{
 						Name:   "Gym Statistics",
