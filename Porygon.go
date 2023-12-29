@@ -293,7 +293,7 @@ func main() {
 			gymStats := ""
 			for _, team := range teams {
 				var count int
-				err = db.QueryRow("SELECT COUNT(*) FROM gym WHERE team_id = ? AND last_modified_timestamp > UNIX_TIMESTAMP() - 4 * 60 * 60", team.ID).Scan(&count)
+				err = db.QueryRow("SELECT COUNT(*) FROM gym WHERE team_id = ? AND updated > UNIX_TIMESTAMP() - 4 * 60 * 60", team.ID).Scan(&count)
 				if err != nil {
 					fmt.Println("error querying MariaDB,", err)
 					db.Close()
