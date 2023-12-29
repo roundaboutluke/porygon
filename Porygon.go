@@ -381,12 +381,12 @@ func main() {
 					{
 						Name:   "Gym Statistics",
 						Value:  gymStats,
-						Inline: true,
+						Inline: false,
 					},
 					{
 						Name:   "Active Lures",
 						Value:  lureStats,
-						Inline: true,
+						Inline: false,
 					},
 				},
 				Timestamp: time.Now().Format(time.RFC3339), 
