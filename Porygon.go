@@ -243,28 +243,28 @@ func main() {
 			}
 
 			var scannedCount, hundoCount, nundoCount, shinyCount, shinySpeciesCount int
-			err = db.QueryRow("SELECT SUM(count) FROM pokemon_stats WHERE date = CURDATE()").Scan(&scannedCount)
+			err = db.QueryRow("SELECT COALESCE(SUM(count), 0) FROM pokemon_stats WHERE date = CURDATE()").Scan(&scannedCount)
 			if err != nil {
 				fmt.Println("error querying MariaDB,", err)
 				db.Close()
 				continue
 			}
 
-			err = db.QueryRow("SELECT SUM(count) FROM pokemon_hundo_stats WHERE date = CURDATE()").Scan(&hundoCount)
+			err = db.QueryRow("SELECT COALESCE(SUM(count), 0) FROM pokemon_hundo_stats WHERE date = CURDATE()").Scan(&hundoCount)
 			if err != nil {
 				fmt.Println("error querying MariaDB,", err)
 				db.Close()
 				continue
 			}
 
-			err = db.QueryRow("SELECT SUM(count) FROM pokemon_nundo_stats WHERE date = CURDATE()").Scan(&nundoCount)
+			err = db.QueryRow("SELECT COALESCE(SUM(count), 0) FROM pokemon_nundo_stats WHERE date = CURDATE()").Scan(&nundoCount)
 			if err != nil {
 				fmt.Println("error querying MariaDB,", err)
 				db.Close()
 				continue
 			}
 
-			err = db.QueryRow("SELECT SUM(count) FROM pokemon_shiny_stats WHERE date = CURDATE()").Scan(&shinyCount)
+			err = db.QueryRow("SELECT COALESCE(SUM(count), 0) FROM pokemon_shiny_stats WHERE date = CURDATE()").Scan(&shinyCount)
 			if err != nil {
 				fmt.Println("error querying MariaDB,", err)
 				db.Close()
