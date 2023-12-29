@@ -13,7 +13,7 @@ Porygon is a reimagining of Discordopole for Golbat, written in go with massive 
 
 ![image](https://i.imgur.com/ZOsk45B.png)
 
-I tried to heed this warning as best I could, providing min/max lon/lat config options and a configurable refresh interval so you can tax your system as much or as little as you want.
+I tried to heed this warning as best I could, providing min/max lon/lat config options, a configurable refresh interval and the ability to disable active counts so you can tax your system as much or as little as you want.
 
 # Requirements
 
@@ -21,15 +21,15 @@ I tried to heed this warning as best I could, providing min/max lon/lat config o
 
 # Installation
 
-1. Git clone the repo
-2. copy `config.example` to `config.json` and fill out accordingly _(refresh interval is in **seconds** - you'll also need to link to your own emojis, there are some in /emojis you can add to your server if you don't already have them)_
+1. Git clone the repo `git clone https://github.com/roundaboutluke/porygon.git`
+2. copy `config.example` to `config.json` and fill out accordingly _(refresh interval is in **seconds**. Custom emojis can be used in place of generic ones with `:emoji:12345678910` some nicer ones are included in the repo)_
 3. `go build .`
 4. `pm2 start ./Porygon --name porygon`
 
 # Important
 
-I don't really know what I'm doing which is probably evident to anyone that does looking at this, but it works for me so hopefully it does for you too. My map is teeny tiny and I trust Jabes wholely so don't be surprised if this is incredibly taxing for you big mappers.
+I don't really know what I'm doing which is probably evident to anyone that does looking at this, but it works for me so hopefully it does for you too. My map is teeny tiny and I trust Jabes wholely so don't be surprised if this is incredibly taxing for you big mappers with `"includeActiveCounts": true`
 
 # Todo
 
-I want to build some (optional) stats from Blissey in, but I haven't even got Blissey running yet 😂
+Many things, I've started tracking them in Issues, please feel free to add more
