@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -23,7 +24,7 @@ type Config struct {
 	} `json:"database"`
 	Discord struct {
 		Token     string `json:"token"`
-		ChannelID string `json:"channelID"`
+		ChannelIDs map[string]string `json:"channelIDs"`
 		Emojis    struct {
 			Valor      string `json:"valor"`
 			Mystic     string `json:"mystic"`
@@ -35,6 +36,10 @@ type Config struct {
 			Magnetic string `json:"magnetic"`
 			Rainy string `json:"rainy"`
 			Sparkly string `json:"sparkly"`
+			Scanned string `json:"scanned"`
+			Hundo string `json:"hundo"`
+			Nundo string `json:"nundo"`
+			Shinies string `json:"shinies"`
 		} `json:"emojis"`
 	} `json:"discord"`
 	API struct {
@@ -52,9 +57,9 @@ type Config struct {
 		} `json:"max"`
 	} `json:"coordinates"`
 	Config struct {
-	RefreshInterval int `json:"refreshInterval"`
+		RefreshInterval int `json:"refreshInterval"`
+		IncludeActiveCounts bool `json:"includeActiveCounts"`
 	} `json:"config"`
-	MessageID string `json:"messageID"`
 }
 
 type ApiResponse struct {
@@ -87,6 +92,13 @@ type Query struct {
 			Max int `json:"max"`
 		} `json:"sta_iv"`
 	} `json:"filters"`
+}
+
+func formatEmoji(emoji string) string {
+	if strings.Contains(emoji, ":") {
+		return "<" + emoji + ">"
+	}
+	return emoji
 }
 
 func apiRequest(config Config, ivMin, ivMax int) ([]ApiResponse, error) {
@@ -192,8 +204,7 @@ func apiRequest(config Config, ivMin, ivMax int) ([]ApiResponse, error) {
 	return apiResponses, nil
 }
 
-func saveMessageID(config *Config, messageID string) {
-	config.MessageID = messageID
+func saveMessageID(config *Config) {
 	jsonData, err := json.MarshalIndent(config, "", "    ")
 	if err != nil {
 		fmt.Println("error marshalling config:", err)
@@ -205,9 +216,8 @@ func saveMessageID(config *Config, messageID string) {
 	}
 }
 
-
-func loadMessageID(config Config) string {
-	return config.MessageID
+func loadMessageIDs(config Config) map[string]string {
+	return config.Discord.ChannelIDs
 }
 
 func main() {
@@ -224,8 +234,6 @@ func main() {
 		fmt.Println("error decoding config file,", err)
 		return
 	}
-
-	messageID := loadMessageID(config)
 
 	dg, err := discordgo.New("Bot " + config.Discord.Token)
 	if err != nil {
@@ -283,10 +291,10 @@ func main() {
 			}
 
 			teams := []Team{
-				{ID: 1, Emoji: "<" + config.Discord.Emojis.Valor + ">"}, 
-				{ID: 2, Emoji: "<" + config.Discord.Emojis.Mystic + ">"}, 
-				{ID: 3, Emoji: "<" + config.Discord.Emojis.Instinct + ">"}, 
-				{ID: 0, Emoji: "<" + config.Discord.Emojis.Uncontested + ">"}, 
+				{ID: 1, Emoji: formatEmoji(config.Discord.Emojis.Valor)},
+				{ID: 2, Emoji: formatEmoji(config.Discord.Emojis.Mystic)},
+				{ID: 3, Emoji: formatEmoji(config.Discord.Emojis.Instinct)},
+				{ID: 0, Emoji: formatEmoji(config.Discord.Emojis.Uncontested)},
 			}
 
 			gymStats := ""
@@ -308,12 +316,12 @@ func main() {
 			}
 
 			lures := []Lure{
-				{ID: 501, Emoji: "<" + config.Discord.Emojis.Normal + ">"}, 
-				{ID: 502, Emoji: "<" + config.Discord.Emojis.Glacial + ">"}, 
-				{ID: 503, Emoji: "<" + config.Discord.Emojis.Mossy + ">"}, 
-				{ID: 504, Emoji: "<" + config.Discord.Emojis.Magnetic + ">"}, 
-				{ID: 505, Emoji: "<" + config.Discord.Emojis.Rainy + ">"}, 
-				{ID: 506, Emoji: "<" + config.Discord.Emojis.Sparkly + ">"}, 
+				{ID: 501, Emoji: formatEmoji(config.Discord.Emojis.Normal)},
+				{ID: 502, Emoji: formatEmoji(config.Discord.Emojis.Glacial)},
+				{ID: 503, Emoji: formatEmoji(config.Discord.Emojis.Mossy)},
+				{ID: 504, Emoji: formatEmoji(config.Discord.Emojis.Magnetic)},
+				{ID: 505, Emoji: formatEmoji(config.Discord.Emojis.Rainy)},
+				{ID: 506, Emoji: formatEmoji(config.Discord.Emojis.Sparkly)},
 			}
 
 			lureStats := ""
@@ -329,52 +337,63 @@ func main() {
 				lureStats += fmt.Sprintf("%s %d ", lure.Emoji, count)
 			}
 
-			hundoApiResponses, err := apiRequest(config, 15, 15)
-			if err != nil {
-				fmt.Println(err)
-				db.Close()
-				continue
+			var hundoActiveCount, nundoActiveCount int
+			if config.Config.IncludeActiveCounts {
+				hundoApiResponses, err := apiRequest(config, 15, 15)
+				if err != nil {
+					fmt.Println(err)
+					db.Close()
+					continue
+				}
+
+				hundoSpawnIds := make(map[int]bool)
+				for _, apiResponse := range hundoApiResponses {
+					hundoSpawnIds[apiResponse.SpawnId] = true
+				}
+				hundoActiveCount = len(hundoSpawnIds)
+
+				nundoApiResponses, err := apiRequest(config, 0, 0)
+				if err != nil {
+					fmt.Println(err)
+					db.Close()
+					continue
+				}
+
+				nundoSpawnIds := make(map[int]bool)
+				for _, apiResponse := range nundoApiResponses {
+					nundoSpawnIds[apiResponse.SpawnId] = true
+				}
+				nundoActiveCount = len(nundoSpawnIds)
 			}
 
-			hundoSpawnIds := make(map[int]bool)
-			for _, apiResponse := range hundoApiResponses {
-				hundoSpawnIds[apiResponse.SpawnId] = true
-			}
-			hundoActiveCount := len(hundoSpawnIds)
+			hundoValue := fmt.Sprintf("%d", hundoCount)
+			nundoValue := fmt.Sprintf("%d", nundoCount)
 
-			nundoApiResponses, err := apiRequest(config, 0, 0)
-			if err != nil {
-				fmt.Println(err)
-				db.Close()
-				continue
+			if config.Config.IncludeActiveCounts {
+				hundoValue = fmt.Sprintf("Active: %d | Today: %s", hundoActiveCount, hundoValue)
+				nundoValue = fmt.Sprintf("Active: %d | Today: %s", nundoActiveCount, nundoValue)
 			}
-
-			nundoSpawnIds := make(map[int]bool)
-			for _, apiResponse := range nundoApiResponses {
-				nundoSpawnIds[apiResponse.SpawnId] = true
-			}
-			nundoActiveCount := len(nundoSpawnIds)
 
 			embed := &discordgo.MessageEmbed{
 				Title: "Today's Pokémon Stats",
 				Fields: []*discordgo.MessageEmbedField{
 					{
-						Name:   "📈 Scanned",
+						Name:   formatEmoji(config.Discord.Emojis.Scanned) + " Scanned",
 						Value:  fmt.Sprintf("%d", scannedCount),
 						Inline: false,
 					},
 					{
-						Name:   "💯 Hundos",
-						Value:  fmt.Sprintf("Active: %d | Today: %d", hundoActiveCount, hundoCount),
+						Name:   formatEmoji(config.Discord.Emojis.Hundo) + " Hundos",
+						Value:  hundoValue,
 						Inline: false,
 					},
 					{
-						Name:   "🗑️ Nundos",
-						Value:  fmt.Sprintf("Active: %d | Today: %d", nundoActiveCount, nundoCount),
+						Name:   formatEmoji(config.Discord.Emojis.Nundo) + " Nundos",
+						Value:  nundoValue,
 						Inline: false,
 					},
 					{
-						Name:   "✨ Shinies",
+						Name:   formatEmoji(config.Discord.Emojis.Shinies) + " Shinies",
 						Value:  fmt.Sprintf("Species: %d | Total: %d", shinySpeciesCount, shinyCount),
 						Inline: false,
 					},
@@ -389,38 +408,30 @@ func main() {
 						Inline: false,
 					},
 				},
-				Timestamp: time.Now().Format(time.RFC3339), 
+				Timestamp: time.Now().Format(time.RFC3339),
 			}
 
-			var msg *discordgo.Message
-
-			if messageID != "" {
-				msg, err = dg.ChannelMessageEditEmbed(config.Discord.ChannelID, messageID, embed)
-				if err != nil {
-					fmt.Println("error editing message,", err)
-					msg, err = dg.ChannelMessageSendEmbed(config.Discord.ChannelID, embed)
+			for channelID, messageID := range config.Discord.ChannelIDs {
+				var msg *discordgo.Message
+				if messageID != "" {
+					msg, err = dg.ChannelMessageEditEmbed(channelID, messageID, embed)
 					if err != nil {
-						fmt.Println("error sending embed to Discord channel,", err)
-						db.Close()
-						continue
+						msg, err = dg.ChannelMessageSendEmbed(channelID, embed)
 					}
+				} else {
+					msg, err = dg.ChannelMessageSendEmbed(channelID, embed)
 				}
-			} else {
-				msg, err = dg.ChannelMessageSendEmbed(config.Discord.ChannelID, embed)
+
 				if err != nil {
-					fmt.Println("error sending embed to Discord channel,", err)
-					db.Close()
-					continue
+					fmt.Println("error sending or editing message in channel", channelID, ":", err)
+				} else if messageID == "" || messageID != msg.ID {
+					config.Discord.ChannelIDs[channelID] = msg.ID
+					saveMessageID(&config)
 				}
 			}
-
-			messageID = msg.ID
-
-			saveMessageID(&config, messageID)
 
 			db.Close()
 			time.Sleep(time.Duration(config.Config.RefreshInterval) * time.Second)
-
 		}
 	}()
 

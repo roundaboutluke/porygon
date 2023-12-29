@@ -4,22 +4,29 @@
         "password": "golbatdbpassword",
         "host": "127.0.0.1",
         "port": "3306",
-        "name": "golbatdb"
+        "name": "golbatdbname"
     },
     "discord": {
         "token": "yourdiscordbottoken",
-        "channelID": "discordchannelID",
+        "channelIDs": {
+            "yourdiscordchannelid": "",
+            "moardiscordchannelidsdeleteifnotneededormakemoar": ""
+        },
         "emojis": {
-            "valor": ":valor:1234567891011121314",
-            "mystic": ":mystic:1234567891011121314",
-            "instinct": ":instinct:1234567891011121314",
-            "uncontested": ":uncontested:1234567891011121314",
-            "normal": ":lure:1234567891011121314",
-            "glacial": ":glaciallure:1234567891011121314",
-            "mossy": ":mossylure:1234567891011121314",
-            "magnetic": ":magneticlure:1234567891011121314",
-            "rainy": ":rainylure:1234567891011121314",
-            "sparkly": ":sparklylure:1234567891011121314"
+            "valor": "🔴",
+            "mystic": "🔵",
+            "instinct": "🌕",
+            "uncontested": "⚪️",
+            "normal": "🎣",
+            "glacial": "❄️",
+            "mossy": "🌿",
+            "magnetic": "🧲",
+            "rainy": "💧",
+            "sparkly": "",
+            "scanned": "📈",
+            "hundo": "💯",
+            "nundo": "🗑️",
+            "shinies": "🥇"
         }
     },
     "api": {
@@ -37,7 +44,7 @@
         }
     },
     "config": {
-        "refreshInterval": 60
-    },
-    "messageID": "thiswillgetreplacedautomagicallywiththeidofthemessagethebotposts"
+        "refreshInterval": 60,
+        "includeActiveCounts": true
+    }
 }
