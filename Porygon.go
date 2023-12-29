@@ -194,18 +194,17 @@ func apiRequest(config Config, ivMin, ivMax int) ([]ApiResponse, error) {
 
 func saveMessageID(config *Config, messageID string) {
 	config.MessageID = messageID
-	configFile, err := os.OpenFile("config.json", os.O_RDWR|os.O_TRUNC, 0644)
+	jsonData, err := json.MarshalIndent(config, "", "    ")
 	if err != nil {
-		fmt.Println("error opening config file,", err)
+		fmt.Println("error marshalling config:", err)
 		return
 	}
-	defer configFile.Close()
-
-	err = json.NewEncoder(configFile).Encode(config)
+	err = ioutil.WriteFile("config.json", jsonData, 0644)
 	if err != nil {
-		fmt.Println("error saving messageID,", err)
+		fmt.Println("error writing config file:", err)
 	}
 }
+
 
 func loadMessageID(config Config) string {
 	return config.MessageID
