@@ -9,8 +9,8 @@
     "discord": {
         "token": "yourdiscordbottoken",
         "channelIDs": {
-            "yourdiscordchannelid": "",
-            "moardiscordchannelidsdeleteifnotneededormakemoar": ""
+            "yourdiscordchannelid": "YourExistingMessageIDIfExists",
+            "moardiscordchannelidsdeleteifnotneededormakemoar": "YourExistingMessageIDIfExists"
         },
         "emojis": {
             "valor": "🔴",
