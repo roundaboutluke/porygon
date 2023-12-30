@@ -29,7 +29,7 @@ I tried to heed this warning as best I could, providing min/max lon/lat config o
 
 # updating
 
-**Note:** ongoing early development means breaking config changes are likely, please check the config.example regualarly
+**Note:** ongoing early development means breaking config changes are likely, please check the config.example regularly
 
 1. `git pull`
 3. `go build .`
