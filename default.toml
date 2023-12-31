@@ -28,6 +28,9 @@ scanned = "📈"
 hundo = "💯"
 nundo = "🗑️"
 shinies = "✨"
+rockets = "⚫️"
+kecleon = "🟢"
+showcase = "🏆"
 
 [api]
 #golbat url and port

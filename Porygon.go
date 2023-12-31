@@ -42,6 +42,9 @@ type Config struct {
 			Hundo string
 			Nundo string
 			Shinies string
+			Rockets string
+			Kecleon string
+			Showcase string
 		}
 	}
 	API struct {
@@ -94,6 +97,11 @@ type Query struct {
 			Max int `json:"max"`
 		} `json:"sta_iv"`
 	} `json:"filters"`
+}
+
+type Incident struct {
+	ID    int
+	Emoji string
 }
 
 func formatEmoji(emoji string) string {
@@ -300,7 +308,6 @@ func main() {
 				db.Close()
 				continue
 			}
-
 			err = db.QueryRow("SELECT COUNT(DISTINCT pokemon_id) FROM pokemon_shiny_stats WHERE date = CURDATE()").Scan(&shinySpeciesCount)
 			if err != nil {
 				fmt.Println("error querying MariaDB,", err)
@@ -397,6 +404,45 @@ func main() {
 				nundoValue = fmt.Sprintf("Active: %d | Today: %s", nundoActiveCount, nundoValue)
 			}
 
+			rocketIncidents := []int{1, 2, 3}
+			rocketCount := 0
+			for _, incidentID := range rocketIncidents {
+				var count int
+				err = db.QueryRow("SELECT COUNT(*) FROM incident WHERE display_type = ? AND expiration > UNIX_TIMESTAMP()", incidentID).Scan(&count)
+				if err != nil {
+					fmt.Println("error querying MariaDB,", err)
+					db.Close()
+					continue
+				}
+				rocketCount += count
+			}
+			incidentStats := fmt.Sprintf("%s %d ", formatEmoji(config.Discord.Emojis.Rockets), rocketCount)
+
+			incidents := []Incident{
+				{ID: 8, Emoji: formatEmoji(config.Discord.Emojis.Kecleon)},
+			}
+
+			for _, incident := range incidents {
+				var count int
+				err = db.QueryRow("SELECT COUNT(*) FROM incident WHERE display_type = ? AND expiration > UNIX_TIMESTAMP()", incident.ID).Scan(&count)
+				if err != nil {
+					fmt.Println("error querying MariaDB,", err)
+					db.Close()
+					continue
+				}
+
+				incidentStats += fmt.Sprintf("%s %d ", incident.Emoji, count)
+			}
+
+			var showcaseCount int
+			err = db.QueryRow("SELECT COUNT(*) FROM incident WHERE display_type = ? AND expiration > UNIX_TIMESTAMP()", 9).Scan(&showcaseCount)
+			if err != nil {
+				fmt.Println("error querying MariaDB,", err)
+				db.Close()
+				continue
+			}
+			showcaseStats := fmt.Sprintf("%s %d ", formatEmoji(config.Discord.Emojis.Showcase), showcaseCount)
+
 			embed := &discordgo.MessageEmbed{
 				Title: "Today's Pokémon Stats",
 				Fields: []*discordgo.MessageEmbedField{
@@ -430,34 +476,43 @@ func main() {
 						Value:  lureStats,
 						Inline: false,
 					},
+					{
+						Name:   "Active Incidents",
+						Value:  incidentStats,
+						Inline: false,
+					},
+					{
+						Name:   "Active Showcases",
+						Value:  showcaseStats,
+						Inline: false,
+					},
 				},
 				Timestamp: time.Now().Format(time.RFC3339),
 			}
 
-for _, channelID := range config.Discord.ChannelIDs {
-    var msg *discordgo.Message
-    var err error
+			for _, channelID := range config.Discord.ChannelIDs {
+				var msg *discordgo.Message
+				var err error
 
-var msgID string
-var ok bool
+				var msgID string
+				var ok bool
 
-if msgID, ok = messageIDs[channelID]; ok {
-    msg, err = dg.ChannelMessageEditEmbed(channelID, msgID, embed)
-    if err != nil {
-        msg, err = dg.ChannelMessageSendEmbed(channelID, embed)
-    }
-} else {
-    msg, err = dg.ChannelMessageSendEmbed(channelID, embed)
-}
+				if msgID, ok = messageIDs[channelID]; ok {
+					msg, err = dg.ChannelMessageEditEmbed(channelID, msgID, embed)
+					if err != nil {
+						msg, err = dg.ChannelMessageSendEmbed(channelID, embed)
+					}
+				} else {
+					msg, err = dg.ChannelMessageSendEmbed(channelID, embed)
+				}
 
-if err != nil {
-    fmt.Println("error sending or editing message in channel", channelID, ":", err)
-} else if msgID == "" || msgID != msg.ID {
-    messageIDs[channelID] = msg.ID
-    saveMessageIDs("messageIDs.json", messageIDs)
-}
-}
-
+				if err != nil {
+					fmt.Println("error sending or editing message in channel", channelID, ":", err)
+				} else if msgID == "" || msgID != msg.ID {
+					messageIDs[channelID] = msg.ID
+					saveMessageIDs("messageIDs.json", messageIDs)
+				}
+			}
 
 			db.Close()
 			time.Sleep(time.Duration(config.Config.RefreshInterval) * time.Second)
@@ -474,3 +529,4 @@ if err != nil {
 	<-make(chan struct{})
 	return
 }
+
