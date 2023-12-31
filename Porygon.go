@@ -5,8 +5,10 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"github.com/BurntSushi/toml"
 	"github.com/bwmarrin/discordgo"
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/dustin/go-humanize"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -16,50 +18,50 @@ import (
 
 type Config struct {
 	Database struct {
-		Username string `json:"username"`
-		Password string `json:"password"`
-		Host     string `json:"host"`
-		Port     string `json:"port"`
-		Name     string `json:"name"`
-	} `json:"database"`
+		Username string
+		Password string
+		Host     string
+		Port     string
+		Name     string
+	}
 	Discord struct {
-		Token     string `json:"token"`
-		ChannelIDs map[string]string `json:"channelIDs"`
+		Token     string
+		ChannelIDs []string
 		Emojis    struct {
-			Valor      string `json:"valor"`
-			Mystic     string `json:"mystic"`
-			Instinct   string `json:"instinct"`
-			Uncontested   string `json:"uncontested"`
-			Normal string `json:"normal"`
-			Glacial string `json:"glacial"`
-			Mossy string `json:"mossy"`
-			Magnetic string `json:"magnetic"`
-			Rainy string `json:"rainy"`
-			Sparkly string `json:"sparkly"`
-			Scanned string `json:"scanned"`
-			Hundo string `json:"hundo"`
-			Nundo string `json:"nundo"`
-			Shinies string `json:"shinies"`
-		} `json:"emojis"`
-	} `json:"discord"`
+			Valor      string
+			Mystic     string
+			Instinct   string
+			Uncontested   string
+			Normal string
+			Glacial string
+			Mossy string
+			Magnetic string
+			Rainy string
+			Sparkly string
+			Scanned string
+			Hundo string
+			Nundo string
+			Shinies string
+		}
+	}
 	API struct {
-		URL    string `json:"url"`
-		Secret string `json:"secret"`
-	} `json:"api"`
+		URL    string
+		Secret string
+	}
 	Coordinates struct {
 		Min struct {
-			Latitude  float64 `json:"latitude"`
-			Longitude float64 `json:"longitude"`
-		} `json:"min"`
+			Latitude  float64
+			Longitude float64
+		}
 		Max struct {
-			Latitude  float64 `json:"latitude"`
-			Longitude float64 `json:"longitude"`
-		} `json:"max"`
-	} `json:"coordinates"`
+			Latitude  float64
+			Longitude float64
+		}
+	}
 	Config struct {
-		RefreshInterval int `json:"refreshInterval"`
-		IncludeActiveCounts bool `json:"includeActiveCounts"`
-	} `json:"config"`
+		RefreshInterval int
+		IncludeActiveCounts bool
+	}
 }
 
 type ApiResponse struct {
@@ -95,7 +97,9 @@ type Query struct {
 }
 
 func formatEmoji(emoji string) string {
-	if strings.Contains(emoji, ":") {
+	if strings.Contains(emoji, "<") && strings.Contains(emoji, ">") {
+		return emoji
+	} else if strings.Contains(emoji, ":") {
 		return "<" + emoji + ">"
 	}
 	return emoji
@@ -204,36 +208,55 @@ func apiRequest(config Config, ivMin, ivMax int) ([]ApiResponse, error) {
 	return apiResponses, nil
 }
 
-func saveMessageID(config *Config) {
-	jsonData, err := json.MarshalIndent(config, "", "    ")
+func saveMessageIDs(filename string, messageIDs map[string]string) {
+	file, err := os.Create(filename)
 	if err != nil {
-		fmt.Println("error marshalling config:", err)
-		return
-	}
-	err = ioutil.WriteFile("config.json", jsonData, 0644)
-	if err != nil {
-		fmt.Println("error writing config file:", err)
-	}
-}
-
-func loadMessageIDs(config Config) map[string]string {
-	return config.Discord.ChannelIDs
-}
-
-func main() {
-	file, err := os.Open("config.json")
-	if err != nil {
-		fmt.Println("error opening config file,", err)
+		fmt.Println("error creating message IDs file:", err)
 		return
 	}
 	defer file.Close()
 
-	config := Config{}
-	err = json.NewDecoder(file).Decode(&config)
-	if err != nil {
-		fmt.Println("error decoding config file,", err)
+	json.NewEncoder(file).Encode(messageIDs)
+}
+
+func loadMessageIDs(filename string) map[string]string {
+	messageIDs := make(map[string]string)
+
+	if _, err := os.Stat(filename); os.IsNotExist(err) {
+		file, err := os.Create(filename)
+		if err != nil {
+			fmt.Println("error creating message IDs file:", err)
+			return messageIDs
+		}
+		defer file.Close()
+
+		json.NewEncoder(file).Encode(messageIDs)
+	} else {
+		file, err := os.Open(filename)
+		if err != nil {
+			fmt.Println("error opening message IDs file:", err)
+			return messageIDs
+		}
+		defer file.Close()
+
+		json.NewDecoder(file).Decode(&messageIDs)
+	}
+
+	return messageIDs
+}
+
+func main() {
+	var config Config
+	if _, err := toml.DecodeFile("default.toml", &config); err != nil {
+		fmt.Println("error decoding default config file,", err)
 		return
 	}
+
+	if _, err := toml.DecodeFile("config.toml", &config); err != nil {
+		fmt.Println("error decoding user config file,", err)
+	}
+
+	messageIDs := loadMessageIDs("messageIDs.json")
 
 	dg, err := discordgo.New("Bot " + config.Discord.Token)
 	if err != nil {
@@ -366,8 +389,8 @@ func main() {
 				nundoActiveCount = len(nundoSpawnIds)
 			}
 
-			hundoValue := fmt.Sprintf("%d", hundoCount)
-			nundoValue := fmt.Sprintf("%d", nundoCount)
+			hundoValue := humanize.Comma(int64(hundoCount))
+			nundoValue := humanize.Comma(int64(nundoCount))
 
 			if config.Config.IncludeActiveCounts {
 				hundoValue = fmt.Sprintf("Active: %d | Today: %s", hundoActiveCount, hundoValue)
@@ -379,7 +402,7 @@ func main() {
 				Fields: []*discordgo.MessageEmbedField{
 					{
 						Name:   formatEmoji(config.Discord.Emojis.Scanned) + " Scanned",
-						Value:  fmt.Sprintf("%d", scannedCount),
+						Value:  humanize.Comma(int64(scannedCount)),
 						Inline: false,
 					},
 					{
@@ -394,7 +417,7 @@ func main() {
 					},
 					{
 						Name:   formatEmoji(config.Discord.Emojis.Shinies) + " Shinies",
-						Value:  fmt.Sprintf("Species: %d | Total: %d", shinySpeciesCount, shinyCount),
+						Value:  fmt.Sprintf("Species: %d | Total: %s", shinySpeciesCount, humanize.Comma(int64(shinyCount))),
 						Inline: false,
 					},
 					{
@@ -411,24 +434,30 @@ func main() {
 				Timestamp: time.Now().Format(time.RFC3339),
 			}
 
-			for channelID, messageID := range config.Discord.ChannelIDs {
-				var msg *discordgo.Message
-				if messageID != "" {
-					msg, err = dg.ChannelMessageEditEmbed(channelID, messageID, embed)
-					if err != nil {
-						msg, err = dg.ChannelMessageSendEmbed(channelID, embed)
-					}
-				} else {
-					msg, err = dg.ChannelMessageSendEmbed(channelID, embed)
-				}
+for _, channelID := range config.Discord.ChannelIDs {
+    var msg *discordgo.Message
+    var err error
 
-				if err != nil {
-					fmt.Println("error sending or editing message in channel", channelID, ":", err)
-				} else if messageID == "" || messageID != msg.ID {
-					config.Discord.ChannelIDs[channelID] = msg.ID
-					saveMessageID(&config)
-				}
-			}
+var msgID string
+var ok bool
+
+if msgID, ok = messageIDs[channelID]; ok {
+    msg, err = dg.ChannelMessageEditEmbed(channelID, msgID, embed)
+    if err != nil {
+        msg, err = dg.ChannelMessageSendEmbed(channelID, embed)
+    }
+} else {
+    msg, err = dg.ChannelMessageSendEmbed(channelID, embed)
+}
+
+if err != nil {
+    fmt.Println("error sending or editing message in channel", channelID, ":", err)
+} else if msgID == "" || msgID != msg.ID {
+    messageIDs[channelID] = msg.ID
+    saveMessageIDs("messageIDs.json", messageIDs)
+}
+}
+
 
 			db.Close()
 			time.Sleep(time.Duration(config.Config.RefreshInterval) * time.Second)
