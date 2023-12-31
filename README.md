@@ -22,14 +22,12 @@ I tried to heed this warning as best I could, providing min/max lon/lat config o
 # Installation
 
 1. Git clone the repo `git clone https://github.com/roundaboutluke/porygon.git`
-2. copy `config.example` to `config.json` and fill out accordingly _(refresh interval is in **seconds**. Custom emojis can be used in place of generic ones with `:emoji:12345678910` some nicer ones are included in the repo)_
+2. `cp default.toml config.toml` & adjust config.toml accordingly
 3. `go build .`
 4. `pm2 start ./Porygon --name porygon`
 
 
 # updating
-
-**Note:** ongoing early development means breaking config changes are likely, please check the config.example regularly
 
 1. `git pull`
 3. `go build .`
@@ -41,4 +39,4 @@ I don't really know what I'm doing which is probably evident to anyone that does
 
 # Todo
 
-Many things, I've started tracking them in Issues, please feel free to add more
+Many things, I've started tracking them in Issues, please feel free to add more!
