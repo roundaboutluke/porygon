@@ -35,7 +35,7 @@ I tried to heed this warning as best I could, providing min/max lon/lat config o
 
 # Important
 
-I don't really know what I'm doing which is probably evident to anyone that does looking at this, but it works for me so hopefully it does for you too. My map is teeny tiny and I trust Jabes wholely so don't be surprised if this is incredibly taxing for you big mappers with `"includeActiveCounts": true`
+I don't really know what I'm doing which is probably evident to anyone that does looking at my spaghetti, but it works for me so hopefully it does for you too.
 
 # Todo
 
