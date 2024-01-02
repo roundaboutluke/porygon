@@ -362,7 +362,7 @@ func main() {
 				}
 
 				if activeRaidCount > 0 || activeEggCount > 0 || (raid.ID != 9 && raid.ID != 4) {
-					raidEggStats += fmt.Sprintf("%s Active: %d | Eggs: %d\n", raid.Emoji, activeRaidCount, activeEggCount)
+					raidEggStats += fmt.Sprintf("%s Hatched: %d | Eggs: %d\n", raid.Emoji, activeRaidCount, activeEggCount)
 				}
 			}
 
