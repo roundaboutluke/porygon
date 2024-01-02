@@ -208,7 +208,9 @@ func apiRequest(config Config, ivMin, ivMax int) ([]ApiResponse, error) {
 		return nil, fmt.Errorf("error creating API request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-Golbat-Secret", config.API.Secret)
+  if config.API.Secret != "" {
+      req.Header.Set("X-Golbat-Secret", config.API.Secret)
+  }
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {

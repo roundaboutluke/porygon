@@ -44,8 +44,8 @@ elite = "🐲"
 [api]
 #golbat url and port
 url = "http://127.0.0.1:9001"
-#golbat secret
-secret = "secret"
+#golbat secret leave blank if not used
+secret = ""
 
 #coordinates below define the area in which API calls are made - adjust if needed for multi-instances where you only want to show active counts for a certain area, defaults cover the world
 [coordinates.min]
