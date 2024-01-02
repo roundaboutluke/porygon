@@ -23,14 +23,23 @@ glacial = "❄️"
 mossy = "🌿"
 magnetic = "🧲"
 rainy = "💧"
-sparkly = "🥇"
+sparkly = "🏅"
 scanned = "📈"
 hundo = "💯"
 nundo = "🗑️"
 shinies = "✨"
-rockets = "⚫️"
+grunt = "🥉"
+leader = "🥈"
+giovanni = "🥇"
 kecleon = "🟢"
 showcase = "🏆"
+route = "⛳️"
+level1 = "1️⃣"
+level3 = "3️⃣"
+level4 = "4️⃣"
+level5 = "5️⃣"
+mega = "📣"
+elite = "🐲"
 
 [api]
 #golbat url and port
@@ -50,4 +59,7 @@ longitude = 180
 [config]
 #refresh time in seconds that the board will query the db
 refreshInterval = 60
-includeActiveCounts = true #if set to false active counts will be removed from hundos/nundos and API calls won't be made
+#if set to false active counts will be removed from hundos/nundos and API calls won't be made
+includeActiveCounts = true 
+#Title of the embed
+EmbedTitle = "Today's Pokémon Stats"

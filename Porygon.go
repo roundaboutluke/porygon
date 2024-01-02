@@ -42,9 +42,18 @@ type Config struct {
 			Hundo string
 			Nundo string
 			Shinies string
-			Rockets string
+			Grunt string
+			Leader string
+			Giovanni string
 			Kecleon string
 			Showcase string
+			Route string
+      Level1 string
+      Level3 string
+      Level4 string
+      Level5 string
+      Mega string
+		  Elite string
 		}
 	}
 	API struct {
@@ -64,6 +73,7 @@ type Config struct {
 	Config struct {
 		RefreshInterval int
 		IncludeActiveCounts bool
+		EmbedTitle string
 	}
 }
 
@@ -100,6 +110,11 @@ type Query struct {
 }
 
 type Incident struct {
+	ID    int
+	Emoji string
+}
+
+type Raid struct {
 	ID    int
 	Emoji string
 }
@@ -194,7 +209,6 @@ func apiRequest(config Config, ivMin, ivMax int) ([]ApiResponse, error) {
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Golbat-Secret", config.API.Secret)
-
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
@@ -308,11 +322,46 @@ func main() {
 				db.Close()
 				continue
 			}
+
 			err = db.QueryRow("SELECT COUNT(DISTINCT pokemon_id) FROM pokemon_shiny_stats WHERE date = CURDATE()").Scan(&shinySpeciesCount)
 			if err != nil {
 				fmt.Println("error querying MariaDB,", err)
 				db.Close()
 				continue
+			}
+
+			// Active Raids and Eggs
+			raids := []Raid{
+				{ID: 1, Emoji: formatEmoji(config.Discord.Emojis.Level1)},
+				{ID: 3, Emoji: formatEmoji(config.Discord.Emojis.Level3)},
+				{ID: 4, Emoji: formatEmoji(config.Discord.Emojis.Level4)},
+				{ID: 5, Emoji: formatEmoji(config.Discord.Emojis.Level5)},
+				{ID: 6, Emoji: formatEmoji(config.Discord.Emojis.Mega)},
+				{ID: 9, Emoji: formatEmoji(config.Discord.Emojis.Elite)},
+			}
+
+			raidEggStats := ""
+			for _, raid := range raids {
+				var activeRaidCount, activeEggCount int
+				if raid.ID == 5 {
+					err = db.QueryRow("SELECT COUNT(*) FROM gym WHERE raid_level IN (5, 8) AND raid_end_timestamp > UNIX_TIMESTAMP()").Scan(&activeRaidCount)
+					err = db.QueryRow("SELECT COUNT(*) FROM gym WHERE raid_level IN (5, 8) AND raid_battle_timestamp > UNIX_TIMESTAMP()").Scan(&activeEggCount)
+				} else if raid.ID == 6 {
+					err = db.QueryRow("SELECT COUNT(*) FROM gym WHERE raid_level IN (6, 7, 10) AND raid_end_timestamp > UNIX_TIMESTAMP()").Scan(&activeRaidCount)
+					err = db.QueryRow("SELECT COUNT(*) FROM gym WHERE raid_level IN (6, 7, 10) AND raid_battle_timestamp > UNIX_TIMESTAMP()").Scan(&activeEggCount)
+				} else {
+					err = db.QueryRow("SELECT COUNT(*) FROM gym WHERE raid_level = ? AND raid_end_timestamp > UNIX_TIMESTAMP()", raid.ID).Scan(&activeRaidCount)
+					err = db.QueryRow("SELECT COUNT(*) FROM gym WHERE raid_level = ? AND raid_battle_timestamp > UNIX_TIMESTAMP()", raid.ID).Scan(&activeEggCount)
+				}
+				if err != nil {
+					fmt.Println("error querying MariaDB,", err)
+					db.Close()
+					continue
+				}
+
+				if activeRaidCount > 0 || activeEggCount > 0 || (raid.ID != 9 && raid.ID != 4) {
+					raidEggStats += fmt.Sprintf("%s Active: %d | Eggs: %d\n", raid.Emoji, activeRaidCount, activeEggCount)
+				}
 			}
 
 			type Team struct {
@@ -404,25 +453,14 @@ func main() {
 				nundoValue = fmt.Sprintf("Active: %d | Today: %s", nundoActiveCount, nundoValue)
 			}
 
-			rocketIncidents := []int{1, 2, 3}
-			rocketCount := 0
-			for _, incidentID := range rocketIncidents {
-				var count int
-				err = db.QueryRow("SELECT COUNT(*) FROM incident WHERE display_type = ? AND expiration > UNIX_TIMESTAMP()", incidentID).Scan(&count)
-				if err != nil {
-					fmt.Println("error querying MariaDB,", err)
-					db.Close()
-					continue
-				}
-				rocketCount += count
-			}
-			incidentStats := fmt.Sprintf("%s %d ", formatEmoji(config.Discord.Emojis.Rockets), rocketCount)
-
-			incidents := []Incident{
-				{ID: 8, Emoji: formatEmoji(config.Discord.Emojis.Kecleon)},
+			rocketIncidents := []Incident{
+				{ID: 1, Emoji: formatEmoji(config.Discord.Emojis.Grunt)},
+				{ID: 2, Emoji: formatEmoji(config.Discord.Emojis.Leader)},
+				{ID: 3, Emoji: formatEmoji(config.Discord.Emojis.Giovanni)},
 			}
 
-			for _, incident := range incidents {
+			rocketStats := ""
+			for _, incident := range rocketIncidents {
 				var count int
 				err = db.QueryRow("SELECT COUNT(*) FROM incident WHERE display_type = ? AND expiration > UNIX_TIMESTAMP()", incident.ID).Scan(&count)
 				if err != nil {
@@ -431,8 +469,17 @@ func main() {
 					continue
 				}
 
-				incidentStats += fmt.Sprintf("%s %d ", incident.Emoji, count)
+				rocketStats += fmt.Sprintf("%s %d ", incident.Emoji, count)
 			}
+
+			var kecleonCount int
+			err = db.QueryRow("SELECT COUNT(*) FROM incident WHERE display_type = ? AND expiration > UNIX_TIMESTAMP()", 8).Scan(&kecleonCount)
+			if err != nil {
+				fmt.Println("error querying MariaDB,", err)
+				db.Close()
+				continue
+			}
+			kecleonStats := fmt.Sprintf("%s %d ", formatEmoji(config.Discord.Emojis.Kecleon), kecleonCount)
 
 			var showcaseCount int
 			err = db.QueryRow("SELECT COUNT(*) FROM incident WHERE display_type = ? AND expiration > UNIX_TIMESTAMP()", 9).Scan(&showcaseCount)
@@ -443,8 +490,17 @@ func main() {
 			}
 			showcaseStats := fmt.Sprintf("%s %d ", formatEmoji(config.Discord.Emojis.Showcase), showcaseCount)
 
+			var activeRoutesCount int
+			err = db.QueryRow("SELECT COUNT(*) FROM route WHERE type = 1").Scan(&activeRoutesCount)
+			if err != nil {
+				fmt.Println("error querying MariaDB,", err)
+				db.Close()
+				continue
+			}
+			activeRoutesStats := fmt.Sprintf("%s %d ", formatEmoji(config.Discord.Emojis.Route), activeRoutesCount)
+
 			embed := &discordgo.MessageEmbed{
-				Title: "Today's Pokémon Stats",
+				Title: config.Config.EmbedTitle,
 				Fields: []*discordgo.MessageEmbedField{
 					{
 						Name:   formatEmoji(config.Discord.Emojis.Scanned) + " Scanned",
@@ -472,20 +528,36 @@ func main() {
 						Inline: false,
 					},
 					{
+						Name:   "Active Raids",
+						Value:  raidEggStats,
+						Inline: false,
+					},
+					{
 						Name:   "Active Lures",
 						Value:  lureStats,
 						Inline: false,
 					},
 					{
-						Name:   "Active Incidents",
-						Value:  incidentStats,
+						Name:   "Active Rockets",
+						Value:  rocketStats,
 						Inline: false,
 					},
 					{
-						Name:   "Active Showcases",
+						Name:   "Active Kecleon",
+						Value:  kecleonStats,
+						Inline: false,
+					},
+					{
+						Name:   "Showcases",
 						Value:  showcaseStats,
 						Inline: false,
 					},
+					{
+						Name:   "Routes",
+						Value:  activeRoutesStats,
+						Inline: false,
+					},
+
 				},
 				Timestamp: time.Now().Format(time.RFC3339),
 			}
@@ -529,4 +601,3 @@ func main() {
 	<-make(chan struct{})
 	return
 }
-
