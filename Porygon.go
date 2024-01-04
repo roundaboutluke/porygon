@@ -360,7 +360,21 @@ func main() {
 			raidEggStats := ""
 			for _, raid := range raids {
 				var activeRaidCount, activeEggCount int
-				// ... (existing code to calculate activeRaidCount and activeEggCount) ...
+				if raid.ID == 5 {
+					err = db.QueryRow("SELECT COUNT(*) FROM gym WHERE raid_level IN (5, 8) AND raid_battle_timestamp <= UNIX_TIMESTAMP() AND raid_end_timestamp > UNIX_TIMESTAMP()").Scan(&activeRaidCount)
+					err = db.QueryRow("SELECT COUNT(*) FROM gym WHERE raid_level IN (5, 8) AND raid_battle_timestamp > UNIX_TIMESTAMP() AND (raid_spawn_timestamp IS NULL OR raid_spawn_timestamp <= UNIX_TIMESTAMP())").Scan(&activeEggCount)
+				} else if raid.ID == 6 {
+					err = db.QueryRow("SELECT COUNT(*) FROM gym WHERE raid_level IN (6, 7, 10) AND raid_battle_timestamp <= UNIX_TIMESTAMP() AND raid_end_timestamp > UNIX_TIMESTAMP()").Scan(&activeRaidCount)
+					err = db.QueryRow("SELECT COUNT(*) FROM gym WHERE raid_level IN (6, 7, 10) AND raid_battle_timestamp > UNIX_TIMESTAMP() AND (raid_spawn_timestamp IS NULL OR raid_spawn_timestamp <= UNIX_TIMESTAMP())").Scan(&activeEggCount)
+				} else {
+					err = db.QueryRow("SELECT COUNT(*) FROM gym WHERE raid_level = ? AND raid_battle_timestamp <= UNIX_TIMESTAMP() AND raid_end_timestamp > UNIX_TIMESTAMP()", raid.ID).Scan(&activeRaidCount)
+					err = db.QueryRow("SELECT COUNT(*) FROM gym WHERE raid_level = ? AND raid_battle_timestamp > UNIX_TIMESTAMP() AND (raid_spawn_timestamp IS NULL OR raid_spawn_timestamp <= UNIX_TIMESTAMP())", raid.ID).Scan(&activeEggCount)
+				}
+				if err != nil {
+					fmt.Println("error querying MariaDB,", err)
+					db.Close()
+					continue
+				}
 
 				if activeRaidCount > 0 || activeEggCount > 0 {
 					raidEggStats += fmt.Sprintf("%s Hatched: %d | Eggs: %d\n", raid.Emoji, activeRaidCount, activeEggCount)
@@ -400,7 +414,7 @@ func main() {
 			pokestopStats := ""
 			for _, pokestop := range pokestops {
 				var count int
-				err = db.QueryRow("SELECT COUNT(*) FROM pokestop WHERE quest_expiry > UNIX_TIMESTAMP()", pokestop.ID).Scan(&count)
+				err = db.QueryRow("SELECT COUNT(*) FROM pokestop WHERE quest_expiry > UNIX_TIMESTAMP()").Scan(&count)
 				if err != nil {
 					fmt.Println("error querying MariaDB,", err)
 					db.Close()
@@ -518,7 +532,7 @@ func main() {
 			if err != nil {
 				fmt.Println("error querying MariaDB,", err)
 				db.Close()
-				continue
+					continue
 			}
 			kecleonStats := fmt.Sprintf("%s %d ", formatEmoji(config.Discord.Emojis.Kecleon), kecleonCount)
 
@@ -540,82 +554,84 @@ func main() {
 			}
 			activeRoutesStats := fmt.Sprintf("%s %d ", formatEmoji(config.Discord.Emojis.Route), activeRoutesCount)
 
-			fields := []*discordgo.MessageEmbedField{
-				{
-					Name:   formatEmoji(config.Discord.Emojis.Scanned) + " Scanned",
-					Value:  humanize.Comma(int64(scannedCount)),
-					Inline: false,
-				},
-				{
-					Name:   formatEmoji(config.Discord.Emojis.Hundo) + " Hundos",
-					Value:  hundoValue,
-					Inline: false,
-				},
-				{
-					Name:   formatEmoji(config.Discord.Emojis.Nundo) + " Nundos",
-					Value:  nundoValue,
-					Inline: false,
-				},
-				{
-					Name:   formatEmoji(config.Discord.Emojis.Shinies) + " Shinies",
-					Value:  fmt.Sprintf("Species: %d | Total: %s", shinySpeciesCount, humanize.Comma(int64(shinyCount))),
-					Inline: false,
-				},
-				{
-					Name:   "Gym Statistics",
-					Value:  gymStats,
-					Inline: false,
-				},
-				{
-					Name:   "PokéStops Scanned",
-					Value:  pokestopStats,
-					Inline: false,
-				},
-				{
-					Name:   "Quest Rewards",
-					Value:  rewardStats,
-					Inline: false,
-				},
-				{
-					Name:   "Active Lures",
-					Value:  lureStats,
-					Inline: false,
-				},
-				{
-					Name:   "Active Rockets",
-					Value:  rocketStats,
-					Inline: false,
-				},
-				{
-					Name:   "Active Kecleon",
-					Value:  kecleonStats,
-					Inline: false,
-				},
-				{
-					Name:   "Showcases",
-					Value:  showcaseStats,
-					Inline: false,
-				},
-				{
-					Name:   "Routes",
-					Value:  activeRoutesStats,
-					Inline: false,
-				},
-			}
+				fields := []*discordgo.MessageEmbedField{
+					{
+		Name:   formatEmoji(config.Discord.Emojis.Scanned) + " Scanned",
+		Value:  humanize.Comma(int64(scannedCount)),
+		Inline: false,
+					},
+					{
+		Name:   formatEmoji(config.Discord.Emojis.Hundo) + " Hundos",
+		Value:  hundoValue,
+		Inline: false,
+					},
+					{
+		Name:   formatEmoji(config.Discord.Emojis.Nundo) + " Nundos",
+		Value:  nundoValue,
+		Inline: false,
+					},
+					{
+		Name:   formatEmoji(config.Discord.Emojis.Shinies) + " Shinies",
+		Value:  fmt.Sprintf("Species: %d | Total: %s", shinySpeciesCount, humanize.Comma(int64(shinyCount))),
+		Inline: false,
+	},
+	{
+		Name:   "Gym Statistics",
+		Value:  gymStats,
+		Inline: false,
+	},
+	{
+		Name:   "PokéStops Scanned",
+		Value:  pokestopStats,
+		Inline: false,
+	},
+	{
+		Name:   "Quest Rewards",
+		Value:  rewardStats,
+		Inline: false,
+	},
+	{
+		Name:   "Active Lures",
+		Value:  lureStats,
+		Inline: false,
+	},
+	{
+		Name:   "Active Rockets",
+		Value:  rocketStats,
+		Inline: false,
+	},
+	{
+		Name:   "Active Kecleon",
+		Value:  kecleonStats,
+		Inline: false,
+	},
+	{
+		Name:   "Showcases",
+		Value:  showcaseStats,
+		Inline: false,
+	},
+	{
+		Name:   "Routes",
+		Value:  activeRoutesStats,
+		Inline: false,
+	},
+}
 
-			if raidEggStats != "" {
-				fields = append(fields, &discordgo.MessageEmbedField{
-					Name:   "Active Raids",
-					Value:  raidEggStats,
-					Inline: false,
-				})
-			}
+if raidEggStats != "" {
+	fields = append(fields, &discordgo.MessageEmbedField{
+		Name:   "Active Raids",
+		Value:  raidEggStats,
+		Inline: false,
+	})
+}
 
-			embed := &discordgo.MessageEmbed{
-				Title: config.Config.EmbedTitle,
-				Fields: fields,
-				Timestamp: time.Now().Format(time.RFC3339),
-			}
+embed := &discordgo.MessageEmbed{
+	Title: config.Config.EmbedTitle,
+	Fields: fields,
+	Timestamp: time.Now().Format(time.RFC3339),
+}
+
+
 
 			for _, channelID := range config.Discord.ChannelIDs {
 				var msg *discordgo.Message
