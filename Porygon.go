@@ -532,7 +532,7 @@ func main() {
 			if err != nil {
 				fmt.Println("error querying MariaDB,", err)
 				db.Close()
-					continue
+				continue
 			}
 			kecleonStats := fmt.Sprintf("%s %d ", formatEmoji(config.Discord.Emojis.Kecleon), kecleonCount)
 
@@ -554,84 +554,82 @@ func main() {
 			}
 			activeRoutesStats := fmt.Sprintf("%s %d ", formatEmoji(config.Discord.Emojis.Route), activeRoutesCount)
 
-				fields := []*discordgo.MessageEmbedField{
-					{
-		Name:   formatEmoji(config.Discord.Emojis.Scanned) + " Scanned",
-		Value:  humanize.Comma(int64(scannedCount)),
-		Inline: false,
-					},
-					{
-		Name:   formatEmoji(config.Discord.Emojis.Hundo) + " Hundos",
-		Value:  hundoValue,
-		Inline: false,
-					},
-					{
-		Name:   formatEmoji(config.Discord.Emojis.Nundo) + " Nundos",
-		Value:  nundoValue,
-		Inline: false,
-					},
-					{
-		Name:   formatEmoji(config.Discord.Emojis.Shinies) + " Shinies",
-		Value:  fmt.Sprintf("Species: %d | Total: %s", shinySpeciesCount, humanize.Comma(int64(shinyCount))),
-		Inline: false,
-	},
-	{
-		Name:   "Gym Statistics",
-		Value:  gymStats,
-		Inline: false,
-	},
-	{
-		Name:   "PokéStops Scanned",
-		Value:  pokestopStats,
-		Inline: false,
-	},
-	{
-		Name:   "Quest Rewards",
-		Value:  rewardStats,
-		Inline: false,
-	},
-	{
-		Name:   "Active Lures",
-		Value:  lureStats,
-		Inline: false,
-	},
-	{
-		Name:   "Active Rockets",
-		Value:  rocketStats,
-		Inline: false,
-	},
-	{
-		Name:   "Active Kecleon",
-		Value:  kecleonStats,
-		Inline: false,
-	},
-	{
-		Name:   "Showcases",
-		Value:  showcaseStats,
-		Inline: false,
-	},
-	{
-		Name:   "Routes",
-		Value:  activeRoutesStats,
-		Inline: false,
-	},
-}
+			fields := []*discordgo.MessageEmbedField{
+				{
+					Name:   formatEmoji(config.Discord.Emojis.Scanned) + " Scanned",
+					Value:  humanize.Comma(int64(scannedCount)),
+					Inline: false,
+				},
+				{
+					Name:   formatEmoji(config.Discord.Emojis.Hundo) + " Hundos",
+					Value:  hundoValue,
+					Inline: false,
+				},
+				{
+					Name:   formatEmoji(config.Discord.Emojis.Nundo) + " Nundos",
+					Value:  nundoValue,
+					Inline: false,
+				},
+				{
+					Name:   formatEmoji(config.Discord.Emojis.Shinies) + " Shinies",
+					Value:  fmt.Sprintf("Species: %d | Total: %s", shinySpeciesCount, humanize.Comma(int64(shinyCount))),
+					Inline: false,
+				},
+				{
+					Name:   "Gym Statistics",
+					Value:  gymStats,
+					Inline: false,
+				},
+				{
+					Name:   "PokéStops Scanned",
+					Value:  pokestopStats,
+					Inline: false,
+				},
+				{
+					Name:   "Quest Rewards",
+					Value:  rewardStats,
+					Inline: false,
+				},
+				{
+					Name:   "Active Lures",
+					Value:  lureStats,
+					Inline: false,
+				},
+				{
+					Name:   "Active Rockets",
+					Value:  rocketStats,
+					Inline: false,
+				},
+				{
+					Name:   "Active Kecleon",
+					Value:  kecleonStats,
+					Inline: false,
+				},
+				{
+					Name:   "Showcases",
+					Value:  showcaseStats,
+					Inline: false,
+				},
+				{
+					Name:   "Routes",
+					Value:  activeRoutesStats,
+					Inline: false,
+				},
+			}
 
-if raidEggStats != "" {
-	fields = append(fields, &discordgo.MessageEmbedField{
-		Name:   "Active Raids",
-		Value:  raidEggStats,
-		Inline: false,
-	})
-}
+			if raidEggStats != "" {
+				fields = append(fields, &discordgo.MessageEmbedField{
+					Name:   "Active Raids",
+					Value:  raidEggStats,
+					Inline: false,
+				})
+			}
 
-embed := &discordgo.MessageEmbed{
-	Title: config.Config.EmbedTitle,
-	Fields: fields,
-	Timestamp: time.Now().Format(time.RFC3339),
-}
-
-
+			embed := &discordgo.MessageEmbed{
+				Title: config.Config.EmbedTitle,
+				Fields: fields,
+				Timestamp: time.Now().Format(time.RFC3339),
+			}
 
 			for _, channelID := range config.Discord.ChannelIDs {
 				var msg *discordgo.Message
