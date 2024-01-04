@@ -295,6 +295,7 @@ func main() {
 				fmt.Println("error connecting to MariaDB,", err)
 				continue
 			}
+			defer db.Close()
 
 			var scannedCount, hundoCount, nundoCount, shinyCount, shinySpeciesCount int
 			err = db.QueryRow("SELECT COALESCE(SUM(count), 0) FROM pokemon_stats WHERE date = CURDATE()").Scan(&scannedCount)
@@ -346,14 +347,14 @@ func main() {
 			for _, raid := range raids {
 				var activeRaidCount, activeEggCount int
 				if raid.ID == 5 {
-					err = db.QueryRow("SELECT COUNT(*) FROM gym WHERE raid_level IN (5, 8) AND raid_end_timestamp > UNIX_TIMESTAMP()").Scan(&activeRaidCount)
-					err = db.QueryRow("SELECT COUNT(*) FROM gym WHERE raid_level IN (5, 8) AND raid_battle_timestamp > UNIX_TIMESTAMP()").Scan(&activeEggCount)
+          err = db.QueryRow("SELECT COUNT(*) FROM gym WHERE raid_level IN (5, 8) AND raid_battle_timestamp <= UNIX_TIMESTAMP() AND raid_end_timestamp > UNIX_TIMESTAMP()").Scan(&activeRaidCount)
+					err = db.QueryRow("SELECT COUNT(*) FROM gym WHERE raid_level IN (5, 8) AND raid_battle_timestamp > UNIX_TIMESTAMP() AND (raid_spawn_timestamp IS NULL OR raid_spawn_timestamp <= UNIX_TIMESTAMP())").Scan(&activeEggCount)
 				} else if raid.ID == 6 {
-					err = db.QueryRow("SELECT COUNT(*) FROM gym WHERE raid_level IN (6, 7, 10) AND raid_end_timestamp > UNIX_TIMESTAMP()").Scan(&activeRaidCount)
-					err = db.QueryRow("SELECT COUNT(*) FROM gym WHERE raid_level IN (6, 7, 10) AND raid_battle_timestamp > UNIX_TIMESTAMP()").Scan(&activeEggCount)
+          err = db.QueryRow("SELECT COUNT(*) FROM gym WHERE raid_level IN (6, 7, 10) AND raid_battle_timestamp <= UNIX_TIMESTAMP() AND raid_end_timestamp > UNIX_TIMESTAMP()").Scan(&activeRaidCount)
+					err = db.QueryRow("SELECT COUNT(*) FROM gym WHERE raid_level IN (6, 7, 10) AND raid_battle_timestamp > UNIX_TIMESTAMP() AND (raid_spawn_timestamp IS NULL OR raid_spawn_timestamp <= UNIX_TIMESTAMP())").Scan(&activeEggCount)		
 				} else {
-					err = db.QueryRow("SELECT COUNT(*) FROM gym WHERE raid_level = ? AND raid_end_timestamp > UNIX_TIMESTAMP()", raid.ID).Scan(&activeRaidCount)
-					err = db.QueryRow("SELECT COUNT(*) FROM gym WHERE raid_level = ? AND raid_battle_timestamp > UNIX_TIMESTAMP()", raid.ID).Scan(&activeEggCount)
+					err = db.QueryRow("SELECT COUNT(*) FROM gym WHERE raid_level = ? AND raid_battle_timestamp <= UNIX_TIMESTAMP() AND raid_end_timestamp > UNIX_TIMESTAMP()", raid.ID).Scan(&activeRaidCount)
+					err = db.QueryRow("SELECT COUNT(*) FROM gym WHERE raid_level = ? AND raid_battle_timestamp > UNIX_TIMESTAMP() AND (raid_spawn_timestamp IS NULL OR raid_spawn_timestamp <= UNIX_TIMESTAMP())", raid.ID).Scan(&activeEggCount)
 				}
 				if err != nil {
 					fmt.Println("error querying MariaDB,", err)
@@ -582,6 +583,7 @@ func main() {
 
 				if err != nil {
 					fmt.Println("error sending or editing message in channel", channelID, ":", err)
+					continue
 				} else if msgID == "" || msgID != msg.ID {
 					messageIDs[channelID] = msg.ID
 					saveMessageIDs("messageIDs.json", messageIDs)
