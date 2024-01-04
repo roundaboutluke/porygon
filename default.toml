@@ -18,6 +18,7 @@ valor = "🔴"
 mystic = "🔵"
 instinct = "🌕"
 uncontested = "⚪️"
+pokestop = "🛑"
 normal = "🎣"
 glacial = "❄️"
 mossy = "🌿"
@@ -40,6 +41,10 @@ level4 = "4️⃣"
 level5 = "5️⃣"
 mega = "📣"
 elite = "🐲"
+items = "🛒"
+encounter = "😈"
+stardust = "🌟"
+megaenergy = "⚡️"
 
 [api]
 #golbat url and port
