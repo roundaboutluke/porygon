@@ -346,13 +346,13 @@ func main() {
 			for _, raid := range raids {
 				var activeRaidCount, activeEggCount int
 				if raid.ID == 5 {
-					err = db.QueryRow("SELECT COUNT(*) FROM gym WHERE raid_level IN (5, 8) AND raid_end_timestamp > UNIX_TIMESTAMP()").Scan(&activeRaidCount)
+					err = db.QueryRow("SELECT COUNT(*) FROM gym WHERE raid_level IN (5, 8) AND raid_pokemon_id<>'0' AND raid_end_timestamp > UNIX_TIMESTAMP()").Scan(&activeRaidCount)
 					err = db.QueryRow("SELECT COUNT(*) FROM gym WHERE raid_level IN (5, 8) AND raid_battle_timestamp > UNIX_TIMESTAMP()").Scan(&activeEggCount)
 				} else if raid.ID == 6 {
-					err = db.QueryRow("SELECT COUNT(*) FROM gym WHERE raid_level IN (6, 7, 10) AND raid_end_timestamp > UNIX_TIMESTAMP()").Scan(&activeRaidCount)
+					err = db.QueryRow("SELECT COUNT(*) FROM gym WHERE raid_level IN (6, 7, 10) AND raid_pokemon_id<>'0' AND raid_end_timestamp > UNIX_TIMESTAMP()").Scan(&activeRaidCount)
 					err = db.QueryRow("SELECT COUNT(*) FROM gym WHERE raid_level IN (6, 7, 10) AND raid_battle_timestamp > UNIX_TIMESTAMP()").Scan(&activeEggCount)
 				} else {
-					err = db.QueryRow("SELECT COUNT(*) FROM gym WHERE raid_level = ? AND raid_end_timestamp > UNIX_TIMESTAMP()", raid.ID).Scan(&activeRaidCount)
+					err = db.QueryRow("SELECT COUNT(*) FROM gym WHERE raid_level = ? AND raid_pokemon_id<>'0' AND raid_end_timestamp > UNIX_TIMESTAMP()", raid.ID).Scan(&activeRaidCount)
 					err = db.QueryRow("SELECT COUNT(*) FROM gym WHERE raid_level = ? AND raid_battle_timestamp > UNIX_TIMESTAMP()", raid.ID).Scan(&activeEggCount)
 				}
 				if err != nil {
