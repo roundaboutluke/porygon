@@ -3,7 +3,7 @@
 
 Porygon is a reimagining of Discordopole for Golbat, written in go with massive amounts of input from GPT-4 to help make my spaghetti code even more spaghetti!
 
-![image](https://i.imgur.com/sGmc7KX.png)
+![image](https://i.imgur.com/Q7jKuVY.png)
 
 
 **Note:** Comparitively to Discordopole the features are amazingly lackluster. This will create a simple board like so featuring daily stats, utilising both the database and API and update based on the interval you define within the config file, that's it (for now).
