@@ -1,0 +1,70 @@
+[database]
+#Golbat Database settings
+username = "user"
+password = "password"
+host = "127.0.0.1"
+port = "3306"
+name = "golbatdbname"
+
+[discord]
+#Discord bot token
+token = ""
+#channel IDs for Discord that you want the boards posted to, array support infinite channels
+channelIDs = ["yourchannelid","moarchannelids"] 
+
+[discord.emojis]
+#can be any unicode emojis or custom discord emojis using the full identifier eg :emoij:12345678910 or <:emoji12345678910>
+valor = "🔴"
+mystic = "🔵"
+instinct = "🌕"
+uncontested = "⚪️"
+pokestop = "🛑"
+normal = "🎣"
+glacial = "❄️"
+mossy = "🌿"
+magnetic = "🧲"
+rainy = "💧"
+sparkly = "🏅"
+scanned = "📈"
+hundo = "💯"
+nundo = "🗑️"
+shinies = "✨"
+grunt = "🥉"
+leader = "🥈"
+giovanni = "🥇"
+kecleon = "🟢"
+showcase = "🏆"
+route = "⛳️"
+level1 = "1️⃣"
+level3 = "3️⃣"
+level4 = "4️⃣"
+level5 = "5️⃣"
+mega = "📣"
+elite = "🐲"
+items = "🛒"
+encounter = "😈"
+stardust = "🌟"
+megaenergy = "⚡️"
+
+[api]
+#golbat url and port
+url = "http://127.0.0.1:9001"
+#golbat secret leave blank if not used
+secret = ""
+
+#coordinates below define the area in which API calls are made - adjust if needed for multi-instances where you only want to show active counts for a certain area, defaults cover the world
+[coordinates.min]
+latitude = -90
+longitude = -180
+
+[coordinates.max]
+latitude = 90
+longitude = 180
+
+[config]
+#refresh time in seconds that the board will query the db
+refreshInterval = 60
+#if set to false active counts will be removed from hundos/nundos and API calls won't be made
+includeActiveCounts = true 
+#Title of the embed
+EmbedTitle = "Today's Pokémon Stats"

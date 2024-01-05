@@ -5,8 +5,10 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"github.com/BurntSushi/toml"
 	"github.com/bwmarrin/discordgo"
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/dustin/go-humanize"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -16,50 +18,68 @@ import (
 
 type Config struct {
 	Database struct {
-		Username string `json:"username"`
-		Password string `json:"password"`
-		Host     string `json:"host"`
-		Port     string `json:"port"`
-		Name     string `json:"name"`
-	} `json:"database"`
+		Username string
+		Password string
+		Host     string
+		Port     string
+		Name     string
+	}
 	Discord struct {
-		Token     string `json:"token"`
-		ChannelIDs map[string]string `json:"channelIDs"`
+		Token     string
+		ChannelIDs []string
 		Emojis    struct {
-			Valor      string `json:"valor"`
-			Mystic     string `json:"mystic"`
-			Instinct   string `json:"instinct"`
-			Uncontested   string `json:"uncontested"`
-			Normal string `json:"normal"`
-			Glacial string `json:"glacial"`
-			Mossy string `json:"mossy"`
-			Magnetic string `json:"magnetic"`
-			Rainy string `json:"rainy"`
-			Sparkly string `json:"sparkly"`
-			Scanned string `json:"scanned"`
-			Hundo string `json:"hundo"`
-			Nundo string `json:"nundo"`
-			Shinies string `json:"shinies"`
-		} `json:"emojis"`
-	} `json:"discord"`
+			Valor      string
+			Mystic     string
+			Instinct   string
+			Uncontested   string
+			Pokestop string
+			Normal string
+			Glacial string
+			Mossy string
+			Magnetic string
+			Rainy string
+			Sparkly string
+			Scanned string
+			Hundo string
+			Nundo string
+			Shinies string
+			Grunt string
+			Leader string
+			Giovanni string
+			Kecleon string
+			Showcase string
+			Route string
+			Level1 string
+			Level3 string
+			Level4 string
+			Level5 string
+			Mega string
+			Elite string
+			Items string
+			Encounter string
+			Stardust string
+			MegaEnergy string
+		}
+	}
 	API struct {
-		URL    string `json:"url"`
-		Secret string `json:"secret"`
-	} `json:"api"`
+		URL    string
+		Secret string
+	}
 	Coordinates struct {
 		Min struct {
-			Latitude  float64 `json:"latitude"`
-			Longitude float64 `json:"longitude"`
-		} `json:"min"`
+			Latitude  float64
+			Longitude float64
+		}
 		Max struct {
-			Latitude  float64 `json:"latitude"`
-			Longitude float64 `json:"longitude"`
-		} `json:"max"`
-	} `json:"coordinates"`
+			Latitude  float64
+			Longitude float64
+		}
+	}
 	Config struct {
-		RefreshInterval int `json:"refreshInterval"`
-		IncludeActiveCounts bool `json:"includeActiveCounts"`
-	} `json:"config"`
+		RefreshInterval int
+		IncludeActiveCounts bool
+		EmbedTitle string
+	}
 }
 
 type ApiResponse struct {
@@ -94,8 +114,30 @@ type Query struct {
 	} `json:"filters"`
 }
 
+type Incident struct {
+	ID    int
+	Emoji string
+}
+
+type Raid struct {
+	ID    int
+	Emoji string
+}
+
+type Reward struct {
+	ID    int
+	Emoji string
+}
+
+type Pokestop struct {
+	ID    int
+	Emoji string
+}
+
 func formatEmoji(emoji string) string {
-	if strings.Contains(emoji, ":") {
+	if strings.Contains(emoji, "<") && strings.Contains(emoji, ">") {
+		return emoji
+	} else if strings.Contains(emoji, ":") {
 		return "<" + emoji + ">"
 	}
 	return emoji
@@ -181,8 +223,9 @@ func apiRequest(config Config, ivMin, ivMax int) ([]ApiResponse, error) {
 		return nil, fmt.Errorf("error creating API request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-Golbat-Secret", config.API.Secret)
-
+	if config.API.Secret != "" {
+		req.Header.Set("X-Golbat-Secret", config.API.Secret)
+	}
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
@@ -204,36 +247,55 @@ func apiRequest(config Config, ivMin, ivMax int) ([]ApiResponse, error) {
 	return apiResponses, nil
 }
 
-func saveMessageID(config *Config) {
-	jsonData, err := json.MarshalIndent(config, "", "    ")
+func saveMessageIDs(filename string, messageIDs map[string]string) {
+	file, err := os.Create(filename)
 	if err != nil {
-		fmt.Println("error marshalling config:", err)
-		return
-	}
-	err = ioutil.WriteFile("config.json", jsonData, 0644)
-	if err != nil {
-		fmt.Println("error writing config file:", err)
-	}
-}
-
-func loadMessageIDs(config Config) map[string]string {
-	return config.Discord.ChannelIDs
-}
-
-func main() {
-	file, err := os.Open("config.json")
-	if err != nil {
-		fmt.Println("error opening config file,", err)
+		fmt.Println("error creating message IDs file:", err)
 		return
 	}
 	defer file.Close()
 
-	config := Config{}
-	err = json.NewDecoder(file).Decode(&config)
-	if err != nil {
-		fmt.Println("error decoding config file,", err)
+	json.NewEncoder(file).Encode(messageIDs)
+}
+
+func loadMessageIDs(filename string) map[string]string {
+	messageIDs := make(map[string]string)
+
+	if _, err := os.Stat(filename); os.IsNotExist(err) {
+		file, err := os.Create(filename)
+		if err != nil {
+			fmt.Println("error creating message IDs file:", err)
+			return messageIDs
+		}
+		defer file.Close()
+
+		json.NewEncoder(file).Encode(messageIDs)
+	} else {
+		file, err := os.Open(filename)
+		if err != nil {
+			fmt.Println("error opening message IDs file:", err)
+			return messageIDs
+		}
+		defer file.Close()
+
+		json.NewDecoder(file).Decode(&messageIDs)
+	}
+
+	return messageIDs
+}
+
+func main() {
+	var config Config
+	if _, err := toml.DecodeFile("default.toml", &config); err != nil {
+		fmt.Println("error decoding default config file,", err)
 		return
 	}
+
+	if _, err := toml.DecodeFile("config.toml", &config); err != nil {
+		fmt.Println("error decoding user config file,", err)
+	}
+
+	messageIDs := loadMessageIDs("messageIDs.json")
 
 	dg, err := discordgo.New("Bot " + config.Discord.Token)
 	if err != nil {
@@ -248,6 +310,7 @@ func main() {
 				fmt.Println("error connecting to MariaDB,", err)
 				continue
 			}
+			defer db.Close()
 
 			var scannedCount, hundoCount, nundoCount, shinyCount, shinySpeciesCount int
 			err = db.QueryRow("SELECT COALESCE(SUM(count), 0) FROM pokemon_stats WHERE date = CURDATE()").Scan(&scannedCount)
@@ -285,6 +348,39 @@ func main() {
 				continue
 			}
 
+			raids := []Raid{
+				{ID: 1, Emoji: formatEmoji(config.Discord.Emojis.Level1)},
+				{ID: 3, Emoji: formatEmoji(config.Discord.Emojis.Level3)},
+				{ID: 4, Emoji: formatEmoji(config.Discord.Emojis.Level4)},
+				{ID: 5, Emoji: formatEmoji(config.Discord.Emojis.Level5)},
+				{ID: 6, Emoji: formatEmoji(config.Discord.Emojis.Mega)},
+				{ID: 9, Emoji: formatEmoji(config.Discord.Emojis.Elite)},
+			}
+
+			raidEggStats := ""
+			for _, raid := range raids {
+				var activeRaidCount, activeEggCount int
+				if raid.ID == 5 {
+					err = db.QueryRow("SELECT COUNT(*) FROM gym WHERE raid_level IN (5, 8) AND raid_battle_timestamp <= UNIX_TIMESTAMP() AND raid_end_timestamp > UNIX_TIMESTAMP()").Scan(&activeRaidCount)
+					err = db.QueryRow("SELECT COUNT(*) FROM gym WHERE raid_level IN (5, 8) AND raid_battle_timestamp > UNIX_TIMESTAMP() AND (raid_spawn_timestamp IS NULL OR raid_spawn_timestamp <= UNIX_TIMESTAMP())").Scan(&activeEggCount)
+				} else if raid.ID == 6 {
+					err = db.QueryRow("SELECT COUNT(*) FROM gym WHERE raid_level IN (6, 7, 10) AND raid_battle_timestamp <= UNIX_TIMESTAMP() AND raid_end_timestamp > UNIX_TIMESTAMP()").Scan(&activeRaidCount)
+					err = db.QueryRow("SELECT COUNT(*) FROM gym WHERE raid_level IN (6, 7, 10) AND raid_battle_timestamp > UNIX_TIMESTAMP() AND (raid_spawn_timestamp IS NULL OR raid_spawn_timestamp <= UNIX_TIMESTAMP())").Scan(&activeEggCount)
+				} else {
+					err = db.QueryRow("SELECT COUNT(*) FROM gym WHERE raid_level = ? AND raid_battle_timestamp <= UNIX_TIMESTAMP() AND raid_end_timestamp > UNIX_TIMESTAMP()", raid.ID).Scan(&activeRaidCount)
+					err = db.QueryRow("SELECT COUNT(*) FROM gym WHERE raid_level = ? AND raid_battle_timestamp > UNIX_TIMESTAMP() AND (raid_spawn_timestamp IS NULL OR raid_spawn_timestamp <= UNIX_TIMESTAMP())", raid.ID).Scan(&activeEggCount)
+				}
+				if err != nil {
+					fmt.Println("error querying MariaDB,", err)
+					db.Close()
+					continue
+				}
+
+				if activeRaidCount > 0 || activeEggCount > 0 {
+					raidEggStats += fmt.Sprintf("%s Hatched: %d | Eggs: %d\n", raid.Emoji, activeRaidCount, activeEggCount)
+				}
+			}
+
 			type Team struct {
 				ID    int
 				Emoji string
@@ -308,6 +404,44 @@ func main() {
 				}
 
 				gymStats += fmt.Sprintf("%s %d ", team.Emoji, count)
+			}
+
+			pokestops := []Pokestop{
+				{ID: 1, Emoji: formatEmoji(config.Discord.Emojis.Pokestop)},
+				// Add more if needed
+			}
+
+			pokestopStats := ""
+			for _, pokestop := range pokestops {
+				var count int
+				err = db.QueryRow("SELECT COUNT(*) FROM pokestop WHERE quest_expiry > UNIX_TIMESTAMP()").Scan(&count)
+				if err != nil {
+					fmt.Println("error querying MariaDB,", err)
+					db.Close()
+					continue
+				}
+
+				pokestopStats += fmt.Sprintf("%s %d ", pokestop.Emoji, count)
+			}
+
+			rewards := []Reward{
+				{ID: 2, Emoji: formatEmoji(config.Discord.Emojis.Items)},
+				{ID: 7, Emoji: formatEmoji(config.Discord.Emojis.Encounter)},
+				{ID: 3, Emoji: formatEmoji(config.Discord.Emojis.Stardust)},
+				{ID: 12, Emoji: formatEmoji(config.Discord.Emojis.MegaEnergy)},
+			}
+
+			rewardStats := ""
+			for _, reward := range rewards {
+				var count int
+				err = db.QueryRow("SELECT COUNT(*) FROM pokestop WHERE (quest_reward_type = ? OR alternative_quest_reward_type = ?) AND quest_expiry > UNIX_TIMESTAMP()", reward.ID, reward.ID).Scan(&count)
+				if err != nil {
+					fmt.Println("error querying MariaDB,", err)
+					db.Close()
+					continue
+				}
+
+				rewardStats += fmt.Sprintf("%s %d ", reward.Emoji, count)
 			}
 
 			type Lure struct {
@@ -366,55 +500,159 @@ func main() {
 				nundoActiveCount = len(nundoSpawnIds)
 			}
 
-			hundoValue := fmt.Sprintf("%d", hundoCount)
-			nundoValue := fmt.Sprintf("%d", nundoCount)
+			hundoValue := humanize.Comma(int64(hundoCount))
+			nundoValue := humanize.Comma(int64(nundoCount))
 
 			if config.Config.IncludeActiveCounts {
 				hundoValue = fmt.Sprintf("Active: %d | Today: %s", hundoActiveCount, hundoValue)
 				nundoValue = fmt.Sprintf("Active: %d | Today: %s", nundoActiveCount, nundoValue)
 			}
 
+			rocketIncidents := []Incident{
+				{ID: 1, Emoji: formatEmoji(config.Discord.Emojis.Grunt)},
+				{ID: 2, Emoji: formatEmoji(config.Discord.Emojis.Leader)},
+				{ID: 3, Emoji: formatEmoji(config.Discord.Emojis.Giovanni)},
+			}
+
+			rocketStats := ""
+			for _, incident := range rocketIncidents {
+				var count int
+				err = db.QueryRow("SELECT COUNT(*) FROM incident WHERE display_type = ? AND expiration > UNIX_TIMESTAMP()", incident.ID).Scan(&count)
+				if err != nil {
+					fmt.Println("error querying MariaDB,", err)
+					db.Close()
+					continue
+				}
+
+				rocketStats += fmt.Sprintf("%s %d ", incident.Emoji, count)
+			}
+
+			var kecleonCount int
+			err = db.QueryRow("SELECT COUNT(*) FROM incident WHERE display_type = ? AND expiration > UNIX_TIMESTAMP()", 8).Scan(&kecleonCount)
+			if err != nil {
+				fmt.Println("error querying MariaDB,", err)
+				db.Close()
+				continue
+			}
+			kecleonStats := fmt.Sprintf("%s %d ", formatEmoji(config.Discord.Emojis.Kecleon), kecleonCount)
+
+			var showcaseCount int
+			err = db.QueryRow("SELECT COUNT(*) FROM incident WHERE display_type = ? AND expiration > UNIX_TIMESTAMP()", 9).Scan(&showcaseCount)
+			if err != nil {
+				fmt.Println("error querying MariaDB,", err)
+				db.Close()
+				continue
+			}
+			showcaseStats := fmt.Sprintf("%s %d ", formatEmoji(config.Discord.Emojis.Showcase), showcaseCount)
+
+			var activeRoutesCount int
+			err = db.QueryRow("SELECT COUNT(*) FROM route WHERE type = 1").Scan(&activeRoutesCount)
+			if err != nil {
+				fmt.Println("error querying MariaDB,", err)
+				db.Close()
+				continue
+			}
+			activeRoutesStats := fmt.Sprintf("%s %d ", formatEmoji(config.Discord.Emojis.Route), activeRoutesCount)
+
+fields := []*discordgo.MessageEmbedField{
+    {
+        Name:   formatEmoji(config.Discord.Emojis.Scanned) + " Scanned",
+        Value:  humanize.Comma(int64(scannedCount)),
+        Inline: false,
+    },
+    {
+        Name:   formatEmoji(config.Discord.Emojis.Hundo) + " Hundos",
+        Value:  hundoValue,
+        Inline: false,
+    },
+    {
+        Name:   formatEmoji(config.Discord.Emojis.Nundo) + " Nundos",
+        Value:  nundoValue,
+        Inline: false,
+    },
+    {
+        Name:   formatEmoji(config.Discord.Emojis.Shinies) + " Shinies",
+        Value:  fmt.Sprintf("Species: %d | Total: %s", shinySpeciesCount, humanize.Comma(int64(shinyCount))),
+        Inline: false,
+    },
+    {
+        Name:   "Gym Statistics",
+        Value:  gymStats,
+        Inline: false,
+    },
+}
+
+if raidEggStats != "" {
+    newFields := make([]*discordgo.MessageEmbedField, len(fields)+1)
+
+    copy(newFields, fields[:5])
+
+
+    newFields[5] = &discordgo.MessageEmbedField{
+        Name:   "Active Raids",
+        Value:  raidEggStats,
+        Inline: false,
+    }
+
+    copy(newFields[6:], fields[5:])
+
+    fields = newFields
+}
+
+fields = append(fields, []*discordgo.MessageEmbedField{
+    {
+        Name:   "PokéStops Scanned",
+        Value:  pokestopStats,
+        Inline: false,
+    },
+    {
+        Name:   "Quest Rewards",
+        Value:  rewardStats,
+        Inline: false,
+    },
+    {
+        Name:   "Active Lures",
+        Value:  lureStats,
+        Inline: false,
+    },
+    {
+        Name:   "Active Rockets",
+        Value:  rocketStats,
+        Inline: false,
+    },
+    {
+        Name:   "Active Kecleon",
+        Value:  kecleonStats,
+        Inline: false,
+    },
+    {
+        Name:   "Showcases",
+        Value:  showcaseStats,
+        Inline: false,
+    },
+    {
+        Name:   "Routes",
+        Value:  activeRoutesStats,
+        Inline: false,
+    },
+}...)
+
+
 			embed := &discordgo.MessageEmbed{
-				Title: "Today's Pokémon Stats",
-				Fields: []*discordgo.MessageEmbedField{
-					{
-						Name:   formatEmoji(config.Discord.Emojis.Scanned) + " Scanned",
-						Value:  fmt.Sprintf("%d", scannedCount),
-						Inline: false,
-					},
-					{
-						Name:   formatEmoji(config.Discord.Emojis.Hundo) + " Hundos",
-						Value:  hundoValue,
-						Inline: false,
-					},
-					{
-						Name:   formatEmoji(config.Discord.Emojis.Nundo) + " Nundos",
-						Value:  nundoValue,
-						Inline: false,
-					},
-					{
-						Name:   formatEmoji(config.Discord.Emojis.Shinies) + " Shinies",
-						Value:  fmt.Sprintf("Species: %d | Total: %d", shinySpeciesCount, shinyCount),
-						Inline: false,
-					},
-					{
-						Name:   "Gym Statistics",
-						Value:  gymStats,
-						Inline: false,
-					},
-					{
-						Name:   "Active Lures",
-						Value:  lureStats,
-						Inline: false,
-					},
-				},
+				Title: config.Config.EmbedTitle,
+				Fields: fields,
 				Timestamp: time.Now().Format(time.RFC3339),
 			}
 
-			for channelID, messageID := range config.Discord.ChannelIDs {
+			for _, channelID := range config.Discord.ChannelIDs {
 				var msg *discordgo.Message
-				if messageID != "" {
-					msg, err = dg.ChannelMessageEditEmbed(channelID, messageID, embed)
+				var err error
+
+				var msgID string
+				var ok bool
+
+				if msgID, ok = messageIDs[channelID]; ok {
+					msg, err = dg.ChannelMessageEditEmbed(channelID, msgID, embed)
 					if err != nil {
 						msg, err = dg.ChannelMessageSendEmbed(channelID, embed)
 					}
@@ -424,9 +662,10 @@ func main() {
 
 				if err != nil {
 					fmt.Println("error sending or editing message in channel", channelID, ":", err)
-				} else if messageID == "" || messageID != msg.ID {
-					config.Discord.ChannelIDs[channelID] = msg.ID
-					saveMessageID(&config)
+					continue
+				} else if msgID == "" || msgID != msg.ID {
+					messageIDs[channelID] = msg.ID
+					saveMessageIDs("messageIDs.json", messageIDs)
 				}
 			}
 
