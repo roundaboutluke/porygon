@@ -433,16 +433,26 @@ func main() {
 
 			rewardStats := ""
 			for _, reward := range rewards {
-				var count int
-				err = db.QueryRow("SELECT COUNT(*) FROM pokestop WHERE (quest_reward_type = ? OR alternative_quest_reward_type = ?) AND quest_expiry > UNIX_TIMESTAMP()", reward.ID, reward.ID).Scan(&count)
-				if err != nil {
-					fmt.Println("error querying MariaDB,", err)
+				var count1, count2 int
+				err1 := db.QueryRow("SELECT COUNT(*) FROM pokestop WHERE quest_reward_type = ? AND quest_expiry > UNIX_TIMESTAMP()", reward.ID).Scan(&count1)
+				err2 := db.QueryRow("SELECT COUNT(*) FROM pokestop WHERE alternative_quest_reward_type = ? AND quest_expiry > UNIX_TIMESTAMP()", reward.ID).Scan(&count2)
+
+				if err1 != nil {
+					fmt.Println("error querying MariaDB,", err1)
 					db.Close()
 					continue
 				}
 
+				if err2 != nil {
+					fmt.Println("error querying MariaDB,", err2)
+					db.Close()
+					continue
+				}
+
+				count := count1 + count2
 				rewardStats += fmt.Sprintf("%s %d ", reward.Emoji, count)
 			}
+
 
 			type Lure struct {
 				ID    int
