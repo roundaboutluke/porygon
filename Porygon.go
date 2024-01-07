@@ -9,7 +9,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/dustin/go-humanize"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 	"strings"
@@ -233,7 +233,7 @@ func apiRequest(config Config, ivMin, ivMax int) ([]ApiResponse, error) {
 	}
 	defer resp.Body.Close()
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("error reading API response: %w", err)
 	}
