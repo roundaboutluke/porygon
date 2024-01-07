@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"github.com/BurntSushi/toml"
 	"github.com/bwmarrin/discordgo"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/dustin/go-humanize"
@@ -14,73 +13,12 @@ import (
 	"os"
 	"strings"
 	"time"
-)
 
-type Config struct {
-	Database struct {
-		Username string
-		Password string
-		Host     string
-		Port     string
-		Name     string
-	}
-	Discord struct {
-		Token     string
-		ChannelIDs []string
-		Emojis    struct {
-			Valor      string
-			Mystic     string
-			Instinct   string
-			Uncontested   string
-			Pokestop string
-			Normal string
-			Glacial string
-			Mossy string
-			Magnetic string
-			Rainy string
-			Sparkly string
-			Scanned string
-			Hundo string
-			Nundo string
-			Shinies string
-			Grunt string
-			Leader string
-			Giovanni string
-			Kecleon string
-			Showcase string
-			Route string
-			Level1 string
-			Level3 string
-			Level4 string
-			Level5 string
-			Mega string
-			Elite string
-			Items string
-			Encounter string
-			Stardust string
-			MegaEnergy string
-		}
-	}
-	API struct {
-		URL    string
-		Secret string
-	}
-	Coordinates struct {
-		Min struct {
-			Latitude  float64
-			Longitude float64
-		}
-		Max struct {
-			Latitude  float64
-			Longitude float64
-		}
-	}
-	Config struct {
-		RefreshInterval int
-		IncludeActiveCounts bool
-		EmbedTitle string
-	}
-}
+
+    "Porygon/config"
+
+
+)
 
 type ApiResponse struct {
 	SpawnId int `json:"spawn_id"`
@@ -143,7 +81,7 @@ func formatEmoji(emoji string) string {
 	return emoji
 }
 
-func apiRequest(config Config, ivMin, ivMax int) ([]ApiResponse, error) {
+func apiRequest(config config.Config, ivMin, ivMax int) ([]ApiResponse, error) {
 	query := Query{
 		Min: struct {
 			Latitude  float64 `json:"latitude"`
@@ -285,15 +223,10 @@ func loadMessageIDs(filename string) map[string]string {
 }
 
 func main() {
-	var config Config
-	if _, err := toml.DecodeFile("default.toml", &config); err != nil {
-		fmt.Println("error decoding default config file,", err)
-		return
-	}
-
-	if _, err := toml.DecodeFile("config.toml", &config); err != nil {
-		fmt.Println("error decoding user config file,", err)
-	}
+	var config config.Config
+    if err :=config.ParseConfig(); err != nil {
+        panic(err)
+    }
 
 	messageIDs := loadMessageIDs("messageIDs.json")
 

@@ -1,6 +1,7 @@
 package config
 
 
+
 type Config struct {
     Discord discord
     Coordinates coordinates
@@ -77,3 +78,6 @@ type emojistruct struct {
         Stardust string
         MegaEnergy string
 }
+
+
+
