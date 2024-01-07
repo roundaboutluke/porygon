@@ -1,7 +1,6 @@
 package main
 
 import (
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"github.com/bwmarrin/discordgo"
@@ -13,27 +12,9 @@ import (
 
 	"Porygon/config"
 	"Porygon/query"
+	"Porygon/pokemon"
+    "Porygon/database"
 )
-
-type Incident struct {
-	ID    int
-	Emoji string
-}
-
-type Raid struct {
-	ID    int
-	Emoji string
-}
-
-type Reward struct {
-	ID    int
-	Emoji string
-}
-
-type Pokestop struct {
-	ID    int
-	Emoji string
-}
 
 func formatEmoji(emoji string) string {
 	if strings.Contains(emoji, "<") && strings.Contains(emoji, ">") {
@@ -98,7 +79,7 @@ func main() {
 
 	go func() {
 		for {
-			db, err := sql.Open("mysql", config.Database.Username+":"+config.Database.Password+"@tcp("+config.Database.Host+":"+config.Database.Port+")/"+config.Database.Name)
+            db, err :=  database.DbConn(config)
 			if err != nil {
 				fmt.Println("error connecting to MariaDB,", err)
 				continue
@@ -141,7 +122,7 @@ func main() {
 				continue
 			}
 
-			raids := []Raid{
+			raids := []pokemon.Raid{
 				{ID: 1, Emoji: formatEmoji(config.Discord.Emojis.Level1)},
 				{ID: 3, Emoji: formatEmoji(config.Discord.Emojis.Level3)},
 				{ID: 4, Emoji: formatEmoji(config.Discord.Emojis.Level4)},
@@ -149,57 +130,33 @@ func main() {
 				{ID: 6, Emoji: formatEmoji(config.Discord.Emojis.Mega)},
 				{ID: 9, Emoji: formatEmoji(config.Discord.Emojis.Elite)},
 			}
+            
+            var raidEggStats string
+    
 
-			raidEggStats := ""
-			for _, raid := range raids {
-				var activeRaidCount, activeEggCount int
-				if raid.ID == 5 {
-					err = db.QueryRow("SELECT COUNT(*) FROM gym WHERE raid_level IN (5, 8) AND raid_battle_timestamp <= UNIX_TIMESTAMP() AND raid_end_timestamp > UNIX_TIMESTAMP()").Scan(&activeRaidCount)
-					err = db.QueryRow("SELECT COUNT(*) FROM gym WHERE raid_level IN (5, 8) AND raid_battle_timestamp > UNIX_TIMESTAMP() AND (raid_spawn_timestamp IS NULL OR raid_spawn_timestamp <= UNIX_TIMESTAMP())").Scan(&activeEggCount)
-				} else if raid.ID == 6 {
-					err = db.QueryRow("SELECT COUNT(*) FROM gym WHERE raid_level IN (6, 7, 10) AND raid_battle_timestamp <= UNIX_TIMESTAMP() AND raid_end_timestamp > UNIX_TIMESTAMP()").Scan(&activeRaidCount)
-					err = db.QueryRow("SELECT COUNT(*) FROM gym WHERE raid_level IN (6, 7, 10) AND raid_battle_timestamp > UNIX_TIMESTAMP() AND (raid_spawn_timestamp IS NULL OR raid_spawn_timestamp <= UNIX_TIMESTAMP())").Scan(&activeEggCount)
-				} else {
-					err = db.QueryRow("SELECT COUNT(*) FROM gym WHERE raid_level = ? AND raid_battle_timestamp <= UNIX_TIMESTAMP() AND raid_end_timestamp > UNIX_TIMESTAMP()", raid.ID).Scan(&activeRaidCount)
-					err = db.QueryRow("SELECT COUNT(*) FROM gym WHERE raid_level = ? AND raid_battle_timestamp > UNIX_TIMESTAMP() AND (raid_spawn_timestamp IS NULL OR raid_spawn_timestamp <= UNIX_TIMESTAMP())", raid.ID).Scan(&activeEggCount)
-				}
-				if err != nil {
-					fmt.Println("error querying MariaDB,", err)
-					db.Close()
-					continue
-				}
+            raidEggStats, err = database.RaidStats(db, raids)
 
-				if activeRaidCount > 0 || activeEggCount > 0 {
-					raidEggStats += fmt.Sprintf("%s Hatched: %d | Eggs: %d\n", raid.Emoji, activeRaidCount, activeEggCount)
-				}
-			}
+            if err != nil{
+                fmt.Println("error querying MariaDB,", err)
+                continue
+            }
+            
 
-			type Team struct {
-				ID    int
-				Emoji string
-			}
-
-			teams := []Team{
+			teams := []pokemon.Team{
 				{ID: 1, Emoji: formatEmoji(config.Discord.Emojis.Valor)},
 				{ID: 2, Emoji: formatEmoji(config.Discord.Emojis.Mystic)},
 				{ID: 3, Emoji: formatEmoji(config.Discord.Emojis.Instinct)},
 				{ID: 0, Emoji: formatEmoji(config.Discord.Emojis.Uncontested)},
 			}
+            gymStats, err := database.GymStats(db, teams)
 
-			gymStats := ""
-			for _, team := range teams {
-				var count int
-				err = db.QueryRow("SELECT COUNT(*) FROM gym WHERE team_id = ? AND updated > UNIX_TIMESTAMP() - 4 * 60 * 60", team.ID).Scan(&count)
-				if err != nil {
-					fmt.Println("error querying MariaDB,", err)
-					db.Close()
-					continue
-				}
 
-				gymStats += fmt.Sprintf("%s %d ", team.Emoji, count)
-			}
+            if err != nil{
+                fmt.Println("error querying MariaDB,", err)
+                continue
+            }
 
-			pokestops := []Pokestop{
+			pokestops := []pokemon.Pokestop{
 				{ID: 1, Emoji: formatEmoji(config.Discord.Emojis.Pokestop)},
 				// Add more if needed
 			}
@@ -217,7 +174,7 @@ func main() {
 				pokestopStats += fmt.Sprintf("%s %d ", pokestop.Emoji, count)
 			}
 
-			rewards := []Reward{
+			rewards := []pokemon.Reward{
 				{ID: 2, Emoji: formatEmoji(config.Discord.Emojis.Items)},
 				{ID: 7, Emoji: formatEmoji(config.Discord.Emojis.Encounter)},
 				{ID: 3, Emoji: formatEmoji(config.Discord.Emojis.Stardust)},
@@ -310,7 +267,7 @@ func main() {
 				nundoValue = fmt.Sprintf("Active: %d | Today: %s", nundoActiveCount, nundoValue)
 			}
 
-			rocketIncidents := []Incident{
+			rocketIncidents := []pokemon.Incident{
 				{ID: 1, Emoji: formatEmoji(config.Discord.Emojis.Grunt)},
 				{ID: 2, Emoji: formatEmoji(config.Discord.Emojis.Leader)},
 				{ID: 3, Emoji: formatEmoji(config.Discord.Emojis.Giovanni)},
