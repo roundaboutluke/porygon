@@ -26,12 +26,15 @@ I tried to heed this warning as best I could, providing min/max lon/lat config o
 3. `go build .`
 4. `pm2 start ./Porygon --name porygon`
 
-
 # updating
 
 1. `git pull`
 3. `go build .`
 3. `pm2 restart porygon`
+
+# Discord Permissions
+
+Porygon requires your bot have the server permissions **Send Messages**, **Read Message History** and **Embed Links** to function.
 
 # Important
 
