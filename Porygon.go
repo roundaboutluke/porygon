@@ -11,9 +11,9 @@ import (
 	"time"
 
 	"Porygon/config"
-	"Porygon/query"
+	"Porygon/database"
 	"Porygon/pokemon"
-    "Porygon/database"
+	"Porygon/query"
 )
 
 func formatEmoji(emoji string) string {
@@ -79,7 +79,7 @@ func main() {
 
 	go func() {
 		for {
-            db, err :=  database.DbConn(config)
+			db, err := database.DbConn(config)
 			if err != nil {
 				fmt.Println("error connecting to MariaDB,", err)
 				continue
@@ -130,17 +130,14 @@ func main() {
 				{ID: 6, Emoji: formatEmoji(config.Discord.Emojis.Mega)},
 				{ID: 9, Emoji: formatEmoji(config.Discord.Emojis.Elite)},
 			}
-            
-            var raidEggStats string
-    
 
-            raidEggStats, err = database.RaidStats(db, raids)
+			var raidEggStats string
+			raidEggStats, err = database.RaidStats(db, raids)
 
-            if err != nil{
-                fmt.Println("error querying MariaDB,", err)
-                continue
-            }
-            
+			if err != nil {
+				fmt.Println("error querying MariaDB,", err)
+				continue
+			}
 
 			teams := []pokemon.Team{
 				{ID: 1, Emoji: formatEmoji(config.Discord.Emojis.Valor)},
@@ -148,13 +145,12 @@ func main() {
 				{ID: 3, Emoji: formatEmoji(config.Discord.Emojis.Instinct)},
 				{ID: 0, Emoji: formatEmoji(config.Discord.Emojis.Uncontested)},
 			}
-            gymStats, err := database.GymStats(db, teams)
+			gymStats, err := database.GymStats(db, teams)
 
-
-            if err != nil{
-                fmt.Println("error querying MariaDB,", err)
-                continue
-            }
+			if err != nil {
+				fmt.Println("error querying MariaDB,", err)
+				continue
+			}
 
 			pokestops := []pokemon.Pokestop{
 				{ID: 1, Emoji: formatEmoji(config.Discord.Emojis.Pokestop)},
