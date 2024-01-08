@@ -9,10 +9,10 @@ import (
 	"os"
 	"time"
 
+	"Porygon/api"
 	"Porygon/config"
 	"Porygon/database"
 	"Porygon/discord"
-	"Porygon/api"
 )
 
 func saveMessageIDs(filename string, messageIDs map[string]string) {
