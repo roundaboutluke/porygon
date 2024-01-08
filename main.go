@@ -12,7 +12,7 @@ import (
 	"Porygon/config"
 	"Porygon/database"
 	"Porygon/discord"
-	"Porygon/query"
+	"Porygon/api"
 )
 
 func saveMessageIDs(filename string, messageIDs map[string]string) {
@@ -136,7 +136,7 @@ func main() {
 			// probs break this out into query? again idk how to handle passing the config well just yet
 			var hundoActiveCount, nundoActiveCount int
 			if config.Config.IncludeActiveCounts {
-				hundoApiResponses, err := query.ApiRequest(config, 15, 15)
+				hundoApiResponses, err := api.ApiRequest(config, 15, 15)
 				if err != nil {
 					fmt.Println(err)
 					db.Close()
@@ -149,7 +149,7 @@ func main() {
 				}
 				hundoActiveCount = len(hundoSpawnIds)
 
-				nundoApiResponses, err := query.ApiRequest(config, 0, 0)
+				nundoApiResponses, err := api.ApiRequest(config, 0, 0)
 				if err != nil {
 					fmt.Println(err)
 					db.Close()
