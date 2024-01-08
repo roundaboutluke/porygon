@@ -16,6 +16,38 @@ func DbConn(config config.Config) (*sql.DB, error) {
 	return DB, err
 }
 
+func PokeStats(db *sql.DB, config config.Config) (int, int, int, int, int, error) {
+	var scannedCount, hundoCount, nundoCount, shinyCount, shinySpeciesCount int
+	var err error
+
+	err = db.QueryRow("SELECT COALESCE(SUM(count), 0) FROM pokemon_stats WHERE date = CURDATE()").Scan(&scannedCount)
+	if err != nil {
+		return scannedCount, hundoCount, nundoCount, shinyCount, shinySpeciesCount, err
+	}
+
+	err = db.QueryRow("SELECT COALESCE(SUM(count), 0) FROM pokemon_hundo_stats WHERE date = CURDATE()").Scan(&hundoCount)
+	if err != nil {
+		return scannedCount, hundoCount, nundoCount, shinyCount, shinySpeciesCount, err
+	}
+
+	err = db.QueryRow("SELECT COALESCE(SUM(count), 0) FROM pokemon_nundo_stats WHERE date = CURDATE()").Scan(&nundoCount)
+	if err != nil {
+		return scannedCount, hundoCount, nundoCount, shinyCount, shinySpeciesCount, err
+	}
+
+	err = db.QueryRow("SELECT COALESCE(SUM(count), 0) FROM pokemon_shiny_stats WHERE date = CURDATE()").Scan(&shinyCount)
+	if err != nil {
+		return scannedCount, hundoCount, nundoCount, shinyCount, shinySpeciesCount, err
+	}
+
+	err = db.QueryRow("SELECT COUNT(DISTINCT pokemon_id) FROM pokemon_shiny_stats WHERE date = CURDATE()").Scan(&shinySpeciesCount)
+	if err != nil {
+		return scannedCount, hundoCount, nundoCount, shinyCount, shinySpeciesCount, err
+	}
+
+	return scannedCount, hundoCount, nundoCount, shinyCount, shinySpeciesCount, err
+}
+
 func RaidStats(db *sql.DB, config config.Config) (string, error) {
 	raidEggStats := ""
 	var err error
@@ -155,4 +187,54 @@ func LureStats(db *sql.DB, config config.Config) (string, error) {
 	}
 
 	return lureStats, err
+}
+
+func Rocketstats(db *sql.DB, config config.Config) (string, error) {
+	rocketStats := ""
+	var err error
+
+	rocketIncidents := []pokemon.Incident{
+		{ID: 1, Emoji: pokemon.FormatEmoji(config.Discord.Emojis.Grunt)},
+		{ID: 2, Emoji: pokemon.FormatEmoji(config.Discord.Emojis.Leader)},
+		{ID: 3, Emoji: pokemon.FormatEmoji(config.Discord.Emojis.Giovanni)},
+	}
+	for _, incident := range rocketIncidents {
+		var count int
+		err = db.QueryRow("SELECT COUNT(*) FROM incident WHERE display_type = ? AND expiration > UNIX_TIMESTAMP()", incident.ID).Scan(&count)
+		if err != nil {
+			return rocketStats, err
+		}
+
+		rocketStats += fmt.Sprintf("%s %d ", incident.Emoji, count)
+	}
+
+	return rocketStats, err
+}
+
+func OtherStats(db *sql.DB, config config.Config) (string, string, string, error) {
+	var kecleonStats, showcaseStats, activeRoutesStats string
+	var err error
+
+	var kecleonCount int
+	err = db.QueryRow("SELECT COUNT(*) FROM incident WHERE display_type = ? AND expiration > UNIX_TIMESTAMP()", 8).Scan(&kecleonCount)
+	if err != nil {
+		return kecleonStats, showcaseStats, activeRoutesStats, err
+	}
+	kecleonStats = fmt.Sprintf("%s %d ", pokemon.FormatEmoji(config.Discord.Emojis.Kecleon), kecleonCount)
+
+	var showcaseCount int
+	err = db.QueryRow("SELECT COUNT(*) FROM incident WHERE display_type = ? AND expiration > UNIX_TIMESTAMP()", 9).Scan(&showcaseCount)
+	if err != nil {
+		return kecleonStats, showcaseStats, activeRoutesStats, err
+	}
+	showcaseStats = fmt.Sprintf("%s %d ", pokemon.FormatEmoji(config.Discord.Emojis.Showcase), showcaseCount)
+
+	var activeRoutesCount int
+	err = db.QueryRow("SELECT COUNT(*) FROM route WHERE type = 1").Scan(&activeRoutesCount)
+	if err != nil {
+		return kecleonStats, showcaseStats, activeRoutesStats, err
+	}
+	activeRoutesStats = fmt.Sprintf("%s %d ", pokemon.FormatEmoji(config.Discord.Emojis.Route), activeRoutesCount)
+
+	return kecleonStats, showcaseStats, activeRoutesStats, err
 }

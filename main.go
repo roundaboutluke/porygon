@@ -76,36 +76,7 @@ func main() {
 			}
 			defer db.Close()
 
-			var scannedCount, hundoCount, nundoCount, shinyCount, shinySpeciesCount int
-			err = db.QueryRow("SELECT COALESCE(SUM(count), 0) FROM pokemon_stats WHERE date = CURDATE()").Scan(&scannedCount)
-			if err != nil {
-				fmt.Println("error querying MariaDB,", err)
-				db.Close()
-				continue
-			}
-
-			err = db.QueryRow("SELECT COALESCE(SUM(count), 0) FROM pokemon_hundo_stats WHERE date = CURDATE()").Scan(&hundoCount)
-			if err != nil {
-				fmt.Println("error querying MariaDB,", err)
-				db.Close()
-				continue
-			}
-
-			err = db.QueryRow("SELECT COALESCE(SUM(count), 0) FROM pokemon_nundo_stats WHERE date = CURDATE()").Scan(&nundoCount)
-			if err != nil {
-				fmt.Println("error querying MariaDB,", err)
-				db.Close()
-				continue
-			}
-
-			err = db.QueryRow("SELECT COALESCE(SUM(count), 0) FROM pokemon_shiny_stats WHERE date = CURDATE()").Scan(&shinyCount)
-			if err != nil {
-				fmt.Println("error querying MariaDB,", err)
-				db.Close()
-				continue
-			}
-
-			err = db.QueryRow("SELECT COUNT(DISTINCT pokemon_id) FROM pokemon_shiny_stats WHERE date = CURDATE()").Scan(&shinySpeciesCount)
+            scannedCount, hundoCount, nundoCount, shinyCount, shinySpeciesCount, err := database.PokeStats(db, config)
 			if err != nil {
 				fmt.Println("error querying MariaDB,", err)
 				db.Close()
@@ -115,33 +86,53 @@ func main() {
 			raidEggStats, err := database.RaidStats(db, config)
 			if err != nil {
 				fmt.Println("error querying MariaDB,", err)
+				db.Close()
 				continue
 			}
 
 			gymStats, err := database.GymStats(db, config)
 			if err != nil {
 				fmt.Println("error querying MariaDB,", err)
+				db.Close()
 				continue
 			}
 
 			pokestopStats, err := database.PokestopStats(db, config)
 			if err != nil {
 				fmt.Println("error querying MariaDB,", err)
+				db.Close()
 				continue
 			}
 
 			rewardStats, err := database.RewardStats(db, config)
 			if err != nil {
 				fmt.Println("error querying MariaDB,", err)
+				db.Close()
 				continue
 			}
 
 			lureStats, err := database.LureStats(db, config)
 			if err != nil {
 				fmt.Println("error querying MariaDB,", err)
+				db.Close()
 				continue
 			}
 
+            rocketStats, err := database.Rocketstats(db, config)
+            if err != nil {
+                fmt.Println("error querying MariaDB,", err)
+                db.Close()
+                continue
+            }
+
+            kecleonStats, showcaseStats, activeRoutesStats, err := database.OtherStats(db, config)
+            if err != nil {
+                fmt.Println("error querying MariaDB,", err)
+                db.Close()
+                continue
+            }
+
+			// probs break this out into query? again idk how to handle passing the config well just yet
 			var hundoActiveCount, nundoActiveCount int
 			if config.Config.IncludeActiveCounts {
 				hundoApiResponses, err := query.ApiRequest(config, 15, 15)
@@ -170,60 +161,13 @@ func main() {
 				}
 				nundoActiveCount = len(nundoSpawnIds)
 			}
-
 			hundoValue := humanize.Comma(int64(hundoCount))
 			nundoValue := humanize.Comma(int64(nundoCount))
-
 			if config.Config.IncludeActiveCounts {
 				hundoValue = fmt.Sprintf("Active: %d | Today: %s", hundoActiveCount, hundoValue)
 				nundoValue = fmt.Sprintf("Active: %d | Today: %s", nundoActiveCount, nundoValue)
 			}
 
-			rocketIncidents := []pokemon.Incident{
-				{ID: 1, Emoji: pokemon.FormatEmoji(config.Discord.Emojis.Grunt)},
-				{ID: 2, Emoji: pokemon.FormatEmoji(config.Discord.Emojis.Leader)},
-				{ID: 3, Emoji: pokemon.FormatEmoji(config.Discord.Emojis.Giovanni)},
-			}
-
-			rocketStats := ""
-			for _, incident := range rocketIncidents {
-				var count int
-				err = db.QueryRow("SELECT COUNT(*) FROM incident WHERE display_type = ? AND expiration > UNIX_TIMESTAMP()", incident.ID).Scan(&count)
-				if err != nil {
-					fmt.Println("error querying MariaDB,", err)
-					db.Close()
-					continue
-				}
-
-				rocketStats += fmt.Sprintf("%s %d ", incident.Emoji, count)
-			}
-
-			var kecleonCount int
-			err = db.QueryRow("SELECT COUNT(*) FROM incident WHERE display_type = ? AND expiration > UNIX_TIMESTAMP()", 8).Scan(&kecleonCount)
-			if err != nil {
-				fmt.Println("error querying MariaDB,", err)
-				db.Close()
-				continue
-			}
-			kecleonStats := fmt.Sprintf("%s %d ", pokemon.FormatEmoji(config.Discord.Emojis.Kecleon), kecleonCount)
-
-			var showcaseCount int
-			err = db.QueryRow("SELECT COUNT(*) FROM incident WHERE display_type = ? AND expiration > UNIX_TIMESTAMP()", 9).Scan(&showcaseCount)
-			if err != nil {
-				fmt.Println("error querying MariaDB,", err)
-				db.Close()
-				continue
-			}
-			showcaseStats := fmt.Sprintf("%s %d ", pokemon.FormatEmoji(config.Discord.Emojis.Showcase), showcaseCount)
-
-			var activeRoutesCount int
-			err = db.QueryRow("SELECT COUNT(*) FROM route WHERE type = 1").Scan(&activeRoutesCount)
-			if err != nil {
-				fmt.Println("error querying MariaDB,", err)
-				db.Close()
-				continue
-			}
-			activeRoutesStats := fmt.Sprintf("%s %d ", pokemon.FormatEmoji(config.Discord.Emojis.Route), activeRoutesCount)
 
 			fields := []*discordgo.MessageEmbedField{
 				{
@@ -316,7 +260,6 @@ func main() {
 			for _, channelID := range config.Discord.ChannelIDs {
 				var msg *discordgo.Message
 				var err error
-
 				var msgID string
 				var ok bool
 
