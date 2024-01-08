@@ -76,7 +76,7 @@ func main() {
 			}
 			defer db.Close()
 
-            scannedCount, hundoCount, nundoCount, shinyCount, shinySpeciesCount, err := database.PokeStats(db, config)
+			scannedCount, hundoCount, nundoCount, shinyCount, shinySpeciesCount, err := database.PokeStats(db, config)
 			if err != nil {
 				fmt.Println("error querying MariaDB,", err)
 				db.Close()
@@ -118,19 +118,19 @@ func main() {
 				continue
 			}
 
-            rocketStats, err := database.Rocketstats(db, config)
-            if err != nil {
-                fmt.Println("error querying MariaDB,", err)
-                db.Close()
-                continue
-            }
+			rocketStats, err := database.Rocketstats(db, config)
+			if err != nil {
+				fmt.Println("error querying MariaDB,", err)
+				db.Close()
+				continue
+			}
 
-            kecleonStats, showcaseStats, activeRoutesStats, err := database.OtherStats(db, config)
-            if err != nil {
-                fmt.Println("error querying MariaDB,", err)
-                db.Close()
-                continue
-            }
+			kecleonStats, showcaseStats, activeRoutesStats, err := database.OtherStats(db, config)
+			if err != nil {
+				fmt.Println("error querying MariaDB,", err)
+				db.Close()
+				continue
+			}
 
 			// probs break this out into query? again idk how to handle passing the config well just yet
 			var hundoActiveCount, nundoActiveCount int
@@ -167,7 +167,6 @@ func main() {
 				hundoValue = fmt.Sprintf("Active: %d | Today: %s", hundoActiveCount, hundoValue)
 				nundoValue = fmt.Sprintf("Active: %d | Today: %s", nundoActiveCount, nundoValue)
 			}
-
 
 			fields := []*discordgo.MessageEmbedField{
 				{
