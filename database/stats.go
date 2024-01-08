@@ -189,7 +189,7 @@ func LureStats(db *sql.DB, config config.Config) (string, error) {
 	return lureStats, err
 }
 
-func Rocketstats(db *sql.DB, config config.Config) (string, error) {
+func RocketStats(db *sql.DB, config config.Config) (string, error) {
 	rocketStats := ""
 	var err error
 

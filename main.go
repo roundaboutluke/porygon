@@ -11,7 +11,7 @@ import (
 
 	"Porygon/config"
 	"Porygon/database"
-	"Porygon/pokemon"
+	"Porygon/discord"
 	"Porygon/query"
 )
 
@@ -54,7 +54,6 @@ func loadMessageIDs(filename string) map[string]string {
 
 func main() {
 	var config config.Config
-
 	if err := config.ParseConfig(); err != nil {
 		panic(err)
 	}
@@ -76,56 +75,58 @@ func main() {
 			}
 			defer db.Close()
 
-			scannedCount, hundoCount, nundoCount, shinyCount, shinySpeciesCount, err := database.PokeStats(db, config)
+			var gathered discord.GatheredStats
+			var hundoCount, nundoCount int
+			gathered.ScannedCount, hundoCount, nundoCount, gathered.ShinyCount, gathered.ShinySpeciesCount, err = database.PokeStats(db, config)
 			if err != nil {
 				fmt.Println("error querying MariaDB,", err)
 				db.Close()
 				continue
 			}
 
-			raidEggStats, err := database.RaidStats(db, config)
+			gathered.RaidEggStats, err = database.RaidStats(db, config)
 			if err != nil {
 				fmt.Println("error querying MariaDB,", err)
 				db.Close()
 				continue
 			}
 
-			gymStats, err := database.GymStats(db, config)
+			gathered.GymStats, err = database.GymStats(db, config)
 			if err != nil {
 				fmt.Println("error querying MariaDB,", err)
 				db.Close()
 				continue
 			}
 
-			pokestopStats, err := database.PokestopStats(db, config)
+			gathered.PokestopStats, err = database.PokestopStats(db, config)
 			if err != nil {
 				fmt.Println("error querying MariaDB,", err)
 				db.Close()
 				continue
 			}
 
-			rewardStats, err := database.RewardStats(db, config)
+			gathered.RewardStats, err = database.RewardStats(db, config)
 			if err != nil {
 				fmt.Println("error querying MariaDB,", err)
 				db.Close()
 				continue
 			}
 
-			lureStats, err := database.LureStats(db, config)
+			gathered.LureStats, err = database.LureStats(db, config)
 			if err != nil {
 				fmt.Println("error querying MariaDB,", err)
 				db.Close()
 				continue
 			}
 
-			rocketStats, err := database.Rocketstats(db, config)
+			gathered.RocketStats, err = database.RocketStats(db, config)
 			if err != nil {
 				fmt.Println("error querying MariaDB,", err)
 				db.Close()
 				continue
 			}
 
-			kecleonStats, showcaseStats, activeRoutesStats, err := database.OtherStats(db, config)
+			gathered.KecleonStats, gathered.ShowcaseStats, gathered.ActiveRoutesStats, err = database.OtherStats(db, config)
 			if err != nil {
 				fmt.Println("error querying MariaDB,", err)
 				db.Close()
@@ -161,94 +162,15 @@ func main() {
 				}
 				nundoActiveCount = len(nundoSpawnIds)
 			}
+
 			hundoValue := humanize.Comma(int64(hundoCount))
 			nundoValue := humanize.Comma(int64(nundoCount))
 			if config.Config.IncludeActiveCounts {
-				hundoValue = fmt.Sprintf("Active: %d | Today: %s", hundoActiveCount, hundoValue)
-				nundoValue = fmt.Sprintf("Active: %d | Today: %s", nundoActiveCount, nundoValue)
+				gathered.HundoValue = fmt.Sprintf("Active: %d | Today: %s", hundoActiveCount, hundoValue)
+				gathered.NundoValue = fmt.Sprintf("Active: %d | Today: %s", nundoActiveCount, nundoValue)
 			}
 
-			fields := []*discordgo.MessageEmbedField{
-				{
-					Name:   pokemon.FormatEmoji(config.Discord.Emojis.Scanned) + " Scanned",
-					Value:  humanize.Comma(int64(scannedCount)),
-					Inline: false,
-				},
-				{
-					Name:   pokemon.FormatEmoji(config.Discord.Emojis.Hundo) + " Hundos",
-					Value:  hundoValue,
-					Inline: false,
-				},
-				{
-					Name:   pokemon.FormatEmoji(config.Discord.Emojis.Nundo) + " Nundos",
-					Value:  nundoValue,
-					Inline: false,
-				},
-				{
-					Name:   pokemon.FormatEmoji(config.Discord.Emojis.Shinies) + " Shinies",
-					Value:  fmt.Sprintf("Species: %d | Total: %s", shinySpeciesCount, humanize.Comma(int64(shinyCount))),
-					Inline: false,
-				},
-				{
-					Name:   "Gym Statistics",
-					Value:  gymStats,
-					Inline: false,
-				},
-			}
-
-			if raidEggStats != "" {
-				newFields := make([]*discordgo.MessageEmbedField, len(fields)+1)
-
-				copy(newFields, fields[:5])
-
-				newFields[5] = &discordgo.MessageEmbedField{
-					Name:   "Active Raids",
-					Value:  raidEggStats,
-					Inline: false,
-				}
-
-				copy(newFields[6:], fields[5:])
-
-				fields = newFields
-			}
-
-			fields = append(fields, []*discordgo.MessageEmbedField{
-				{
-					Name:   "PokéStops Scanned",
-					Value:  pokestopStats,
-					Inline: false,
-				},
-				{
-					Name:   "Quest Rewards",
-					Value:  rewardStats,
-					Inline: false,
-				},
-				{
-					Name:   "Active Lures",
-					Value:  lureStats,
-					Inline: false,
-				},
-				{
-					Name:   "Active Rockets",
-					Value:  rocketStats,
-					Inline: false,
-				},
-				{
-					Name:   "Active Kecleon",
-					Value:  kecleonStats,
-					Inline: false,
-				},
-				{
-					Name:   "Showcases",
-					Value:  showcaseStats,
-					Inline: false,
-				},
-				{
-					Name:   "Routes",
-					Value:  activeRoutesStats,
-					Inline: false,
-				},
-			}...)
+			fields := discord.GenerateFields(config, gathered)
 
 			embed := &discordgo.MessageEmbed{
 				Title:     config.Config.EmbedTitle,
