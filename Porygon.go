@@ -7,7 +7,6 @@ import (
 	"github.com/dustin/go-humanize"
 	_ "github.com/go-sql-driver/mysql"
 	"os"
-	"strings"
 	"time"
 
 	"Porygon/config"
@@ -15,15 +14,6 @@ import (
 	"Porygon/pokemon"
 	"Porygon/query"
 )
-
-func formatEmoji(emoji string) string {
-	if strings.Contains(emoji, "<") && strings.Contains(emoji, ">") {
-		return emoji
-	} else if strings.Contains(emoji, ":") {
-		return "<" + emoji + ">"
-	}
-	return emoji
-}
 
 func saveMessageIDs(filename string, messageIDs map[string]string) {
 	file, err := os.Create(filename)
@@ -122,108 +112,34 @@ func main() {
 				continue
 			}
 
-			raids := []pokemon.Raid{
-				{ID: 1, Emoji: formatEmoji(config.Discord.Emojis.Level1)},
-				{ID: 3, Emoji: formatEmoji(config.Discord.Emojis.Level3)},
-				{ID: 4, Emoji: formatEmoji(config.Discord.Emojis.Level4)},
-				{ID: 5, Emoji: formatEmoji(config.Discord.Emojis.Level5)},
-				{ID: 6, Emoji: formatEmoji(config.Discord.Emojis.Mega)},
-				{ID: 9, Emoji: formatEmoji(config.Discord.Emojis.Elite)},
-			}
-
-			var raidEggStats string
-			raidEggStats, err = database.RaidStats(db, raids)
-
+			raidEggStats, err := database.RaidStats(db, config)
 			if err != nil {
 				fmt.Println("error querying MariaDB,", err)
 				continue
 			}
 
-			teams := []pokemon.Team{
-				{ID: 1, Emoji: formatEmoji(config.Discord.Emojis.Valor)},
-				{ID: 2, Emoji: formatEmoji(config.Discord.Emojis.Mystic)},
-				{ID: 3, Emoji: formatEmoji(config.Discord.Emojis.Instinct)},
-				{ID: 0, Emoji: formatEmoji(config.Discord.Emojis.Uncontested)},
-			}
-			gymStats, err := database.GymStats(db, teams)
-
+			gymStats, err := database.GymStats(db, config)
 			if err != nil {
 				fmt.Println("error querying MariaDB,", err)
 				continue
 			}
 
-			pokestops := []pokemon.Pokestop{
-				{ID: 1, Emoji: formatEmoji(config.Discord.Emojis.Pokestop)},
-				// Add more if needed
+			pokestopStats, err := database.PokestopStats(db, config)
+			if err != nil {
+				fmt.Println("error querying MariaDB,", err)
+				continue
 			}
 
-			pokestopStats := ""
-			for _, pokestop := range pokestops {
-				var count int
-				err = db.QueryRow("SELECT COUNT(*) FROM pokestop WHERE quest_expiry > UNIX_TIMESTAMP()").Scan(&count)
-				if err != nil {
-					fmt.Println("error querying MariaDB,", err)
-					db.Close()
-					continue
-				}
-
-				pokestopStats += fmt.Sprintf("%s %d ", pokestop.Emoji, count)
+			rewardStats, err := database.RewardStats(db, config)
+			if err != nil {
+				fmt.Println("error querying MariaDB,", err)
+				continue
 			}
 
-			rewards := []pokemon.Reward{
-				{ID: 2, Emoji: formatEmoji(config.Discord.Emojis.Items)},
-				{ID: 7, Emoji: formatEmoji(config.Discord.Emojis.Encounter)},
-				{ID: 3, Emoji: formatEmoji(config.Discord.Emojis.Stardust)},
-				{ID: 12, Emoji: formatEmoji(config.Discord.Emojis.MegaEnergy)},
-			}
-
-			rewardStats := ""
-			for _, reward := range rewards {
-				var count1, count2 int
-				err1 := db.QueryRow("SELECT COUNT(*) FROM pokestop WHERE quest_reward_type = ? AND quest_expiry > UNIX_TIMESTAMP()", reward.ID).Scan(&count1)
-				err2 := db.QueryRow("SELECT COUNT(*) FROM pokestop WHERE alternative_quest_reward_type = ? AND quest_expiry > UNIX_TIMESTAMP()", reward.ID).Scan(&count2)
-
-				if err1 != nil {
-					fmt.Println("error querying MariaDB,", err1)
-					db.Close()
-					continue
-				}
-
-				if err2 != nil {
-					fmt.Println("error querying MariaDB,", err2)
-					db.Close()
-					continue
-				}
-
-				count := count1 + count2
-				rewardStats += fmt.Sprintf("%s %d ", reward.Emoji, count)
-			}
-
-			type Lure struct {
-				ID    int
-				Emoji string
-			}
-
-			lures := []Lure{
-				{ID: 501, Emoji: formatEmoji(config.Discord.Emojis.Normal)},
-				{ID: 502, Emoji: formatEmoji(config.Discord.Emojis.Glacial)},
-				{ID: 503, Emoji: formatEmoji(config.Discord.Emojis.Mossy)},
-				{ID: 504, Emoji: formatEmoji(config.Discord.Emojis.Magnetic)},
-				{ID: 505, Emoji: formatEmoji(config.Discord.Emojis.Rainy)},
-				{ID: 506, Emoji: formatEmoji(config.Discord.Emojis.Sparkly)},
-			}
-
-			lureStats := ""
-			for _, lure := range lures {
-				var count int
-				err = db.QueryRow("SELECT COUNT(*) FROM pokestop WHERE lure_id = ? AND lure_expire_timestamp > UNIX_TIMESTAMP()", lure.ID).Scan(&count)
-				if err != nil {
-					fmt.Println("error querying MariaDB,", err)
-					db.Close()
-					continue
-				}
-
-				lureStats += fmt.Sprintf("%s %d ", lure.Emoji, count)
+			lureStats, err := database.LureStats(db, config)
+			if err != nil {
+				fmt.Println("error querying MariaDB,", err)
+				continue
 			}
 
 			var hundoActiveCount, nundoActiveCount int
@@ -264,9 +180,9 @@ func main() {
 			}
 
 			rocketIncidents := []pokemon.Incident{
-				{ID: 1, Emoji: formatEmoji(config.Discord.Emojis.Grunt)},
-				{ID: 2, Emoji: formatEmoji(config.Discord.Emojis.Leader)},
-				{ID: 3, Emoji: formatEmoji(config.Discord.Emojis.Giovanni)},
+				{ID: 1, Emoji: pokemon.FormatEmoji(config.Discord.Emojis.Grunt)},
+				{ID: 2, Emoji: pokemon.FormatEmoji(config.Discord.Emojis.Leader)},
+				{ID: 3, Emoji: pokemon.FormatEmoji(config.Discord.Emojis.Giovanni)},
 			}
 
 			rocketStats := ""
@@ -289,7 +205,7 @@ func main() {
 				db.Close()
 				continue
 			}
-			kecleonStats := fmt.Sprintf("%s %d ", formatEmoji(config.Discord.Emojis.Kecleon), kecleonCount)
+			kecleonStats := fmt.Sprintf("%s %d ", pokemon.FormatEmoji(config.Discord.Emojis.Kecleon), kecleonCount)
 
 			var showcaseCount int
 			err = db.QueryRow("SELECT COUNT(*) FROM incident WHERE display_type = ? AND expiration > UNIX_TIMESTAMP()", 9).Scan(&showcaseCount)
@@ -298,7 +214,7 @@ func main() {
 				db.Close()
 				continue
 			}
-			showcaseStats := fmt.Sprintf("%s %d ", formatEmoji(config.Discord.Emojis.Showcase), showcaseCount)
+			showcaseStats := fmt.Sprintf("%s %d ", pokemon.FormatEmoji(config.Discord.Emojis.Showcase), showcaseCount)
 
 			var activeRoutesCount int
 			err = db.QueryRow("SELECT COUNT(*) FROM route WHERE type = 1").Scan(&activeRoutesCount)
@@ -307,26 +223,26 @@ func main() {
 				db.Close()
 				continue
 			}
-			activeRoutesStats := fmt.Sprintf("%s %d ", formatEmoji(config.Discord.Emojis.Route), activeRoutesCount)
+			activeRoutesStats := fmt.Sprintf("%s %d ", pokemon.FormatEmoji(config.Discord.Emojis.Route), activeRoutesCount)
 
 			fields := []*discordgo.MessageEmbedField{
 				{
-					Name:   formatEmoji(config.Discord.Emojis.Scanned) + " Scanned",
+					Name:   pokemon.FormatEmoji(config.Discord.Emojis.Scanned) + " Scanned",
 					Value:  humanize.Comma(int64(scannedCount)),
 					Inline: false,
 				},
 				{
-					Name:   formatEmoji(config.Discord.Emojis.Hundo) + " Hundos",
+					Name:   pokemon.FormatEmoji(config.Discord.Emojis.Hundo) + " Hundos",
 					Value:  hundoValue,
 					Inline: false,
 				},
 				{
-					Name:   formatEmoji(config.Discord.Emojis.Nundo) + " Nundos",
+					Name:   pokemon.FormatEmoji(config.Discord.Emojis.Nundo) + " Nundos",
 					Value:  nundoValue,
 					Inline: false,
 				},
 				{
-					Name:   formatEmoji(config.Discord.Emojis.Shinies) + " Shinies",
+					Name:   pokemon.FormatEmoji(config.Discord.Emojis.Shinies) + " Shinies",
 					Value:  fmt.Sprintf("Species: %d | Total: %s", shinySpeciesCount, humanize.Comma(int64(shinyCount))),
 					Inline: false,
 				},
