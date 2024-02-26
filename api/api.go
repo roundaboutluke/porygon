@@ -7,7 +7,7 @@ import (
 	"io"
 	"net/http"
 
-	"Porygon/config"
+	"porygon/config"
 )
 
 type apiResponse struct {

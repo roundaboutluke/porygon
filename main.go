@@ -4,15 +4,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/bwmarrin/discordgo"
-	"github.com/dustin/go-humanize"
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/jmoiron/sqlx"
 	"os"
 	"time"
 
-	"Porygon/api"
-	"Porygon/config"
-	"Porygon/database"
-	"Porygon/discord"
+	"porygon/api"
+	"porygon/config"
+	"porygon/database"
+	"porygon/discord"
 )
 
 func saveMessageIDs(filename string, messageIDs map[string]string) {
@@ -52,6 +52,86 @@ func loadMessageIDs(filename string) map[string]string {
 	return messageIDs
 }
 
+func gatherStats(db *sqlx.DB, config config.Config) (discord.GatheredStats, error) {
+	start := time.Now()
+	var err error
+	var gathered discord.GatheredStats
+
+	gathered.Pokemon, err = database.GetPokeStats(db)
+	if err != nil {
+		return gathered, err
+	}
+
+	gathered.RaidEgg, err = database.GetRaidStats(db)
+	if err != nil {
+		return gathered, err
+	}
+
+	gathered.Gym, err = database.GetGymStats(db)
+	if err != nil {
+		return gathered, err
+	}
+
+	gathered.Pokestop, err = database.GetPokestopStats(db)
+	if err != nil {
+		return gathered, err
+	}
+
+	gathered.Reward, err = database.GetRewardStats(db)
+	if err != nil {
+		return gathered, err
+	}
+
+	gathered.Lure, err = database.GetLureStats(db)
+	if err != nil {
+		return gathered, err
+	}
+
+	gathered.Rocket, err = database.GetRocketStats(db)
+	if err != nil {
+		return gathered, err
+	}
+
+	gathered.Event, err = database.GetEventStats(db)
+	if err != nil {
+		return gathered, err
+	}
+
+	gathered.Route, err = database.GetRoutesStats(db)
+	if err != nil {
+		return gathered, err
+	}
+
+	// probs break this out into query? again idk how to handle passing the config well just yet
+	if config.Config.IncludeActiveCounts {
+		hundoApiResponses, err := api.ApiRequest(config, 15, 15)
+		if err != nil {
+			return gathered, err
+		}
+
+		hundoSpawnIds := make(map[int]bool)
+		for _, apiResponse := range hundoApiResponses {
+			hundoSpawnIds[apiResponse.SpawnId] = true
+		}
+		gathered.HundoActiveCount = len(hundoSpawnIds)
+
+		nundoApiResponses, err := api.ApiRequest(config, 0, 0)
+		if err != nil {
+			return gathered, err
+		}
+
+		nundoSpawnIds := make(map[int]bool)
+		for _, apiResponse := range nundoApiResponses {
+			nundoSpawnIds[apiResponse.SpawnId] = true
+		}
+		gathered.NundoActiveCount = len(nundoSpawnIds)
+	}
+
+	elapsed := time.Since(start)
+	fmt.Printf("Fetched stats in %s\n", elapsed)
+	return gathered, nil
+}
+
 func main() {
 	var config config.Config
 	if err := config.ParseConfig(); err != nil {
@@ -71,106 +151,18 @@ func main() {
 			db, err := database.DbConn(config)
 			if err != nil {
 				fmt.Println("error connecting to MariaDB,", err)
+				time.Sleep(time.Duration(config.Config.ErrorRefreshInterval) * time.Second)
 				continue
 			}
-			defer db.Close()
-
-			var gathered discord.GatheredStats
-			var hundoCount, nundoCount int
-			gathered.ScannedCount, hundoCount, nundoCount, gathered.ShinyCount, gathered.ShinySpeciesCount, err = database.PokeStats(db, config)
+			gathered, err := gatherStats(db, config)
+			db.Close()
 			if err != nil {
-				fmt.Println("error querying MariaDB,", err)
-				db.Close()
+				fmt.Println("failed to fetch stats,", err)
+				time.Sleep(time.Duration(config.Config.ErrorRefreshInterval) * time.Second)
 				continue
 			}
 
-			gathered.RaidEggStats, err = database.RaidStats(db, config)
-			if err != nil {
-				fmt.Println("error querying MariaDB,", err)
-				db.Close()
-				continue
-			}
-
-			gathered.GymStats, err = database.GymStats(db, config)
-			if err != nil {
-				fmt.Println("error querying MariaDB,", err)
-				db.Close()
-				continue
-			}
-
-			gathered.PokestopStats, err = database.PokestopStats(db, config)
-			if err != nil {
-				fmt.Println("error querying MariaDB,", err)
-				db.Close()
-				continue
-			}
-
-			gathered.RewardStats, err = database.RewardStats(db, config)
-			if err != nil {
-				fmt.Println("error querying MariaDB,", err)
-				db.Close()
-				continue
-			}
-
-			gathered.LureStats, err = database.LureStats(db, config)
-			if err != nil {
-				fmt.Println("error querying MariaDB,", err)
-				db.Close()
-				continue
-			}
-
-			gathered.RocketStats, err = database.RocketStats(db, config)
-			if err != nil {
-				fmt.Println("error querying MariaDB,", err)
-				db.Close()
-				continue
-			}
-
-			gathered.KecleonStats, gathered.ShowcaseStats, gathered.ActiveRoutesStats, err = database.OtherStats(db, config)
-			if err != nil {
-				fmt.Println("error querying MariaDB,", err)
-				db.Close()
-				continue
-			}
-
-			// probs break this out into query? again idk how to handle passing the config well just yet
-			var hundoActiveCount, nundoActiveCount int
-			if config.Config.IncludeActiveCounts {
-				hundoApiResponses, err := api.ApiRequest(config, 15, 15)
-				if err != nil {
-					fmt.Println(err)
-					db.Close()
-					continue
-				}
-
-				hundoSpawnIds := make(map[int]bool)
-				for _, apiResponse := range hundoApiResponses {
-					hundoSpawnIds[apiResponse.SpawnId] = true
-				}
-				hundoActiveCount = len(hundoSpawnIds)
-
-				nundoApiResponses, err := api.ApiRequest(config, 0, 0)
-				if err != nil {
-					fmt.Println(err)
-					db.Close()
-					continue
-				}
-
-				nundoSpawnIds := make(map[int]bool)
-				for _, apiResponse := range nundoApiResponses {
-					nundoSpawnIds[apiResponse.SpawnId] = true
-				}
-				nundoActiveCount = len(nundoSpawnIds)
-			}
-
-			hundoValue := humanize.Comma(int64(hundoCount))
-			nundoValue := humanize.Comma(int64(nundoCount))
-			if config.Config.IncludeActiveCounts {
-				gathered.HundoValue = fmt.Sprintf("Active: %d | Today: %s", hundoActiveCount, hundoValue)
-				gathered.NundoValue = fmt.Sprintf("Active: %d | Today: %s", nundoActiveCount, nundoValue)
-			}
-
-			fields := discord.GenerateFields(config, gathered)
+			fields := discord.GenerateFields(gathered, config)
 
 			embed := &discordgo.MessageEmbed{
 				Title:     config.Config.EmbedTitle,
@@ -202,7 +194,6 @@ func main() {
 				}
 			}
 
-			db.Close()
 			time.Sleep(time.Duration(config.Config.RefreshInterval) * time.Second)
 		}
 	}()

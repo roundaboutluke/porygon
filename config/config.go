@@ -6,12 +6,18 @@ type Config struct {
 	Database    database
 	API         api
 	Config      config
+	LevelEmoji  map[string]string `toml:"level_emoji"`
+	RewardEmoji map[string]string `toml:"reward_emoji"`
+	LureEmoji   map[string]string `toml:"lure_emoji"`
+	RocketEmoji map[string]string `toml:"rocket_emoji"`
+	EventEmoji  map[string]string `toml:"event_emoji"`
 }
 
 type config struct {
-	RefreshInterval     int
-	IncludeActiveCounts bool
-	EmbedTitle          string
+	RefreshInterval      int
+	ErrorRefreshInterval int
+	IncludeActiveCounts  bool
+	EmbedTitle           string
 }
 
 type api struct {
@@ -40,39 +46,4 @@ type coordinates struct {
 type discord struct {
 	Token      string
 	ChannelIDs []string
-	Emojis     emojistruct
-}
-
-type emojistruct struct {
-	Valor       string
-	Mystic      string
-	Instinct    string
-	Uncontested string
-	Pokestop    string
-	Normal      string
-	Glacial     string
-	Mossy       string
-	Magnetic    string
-	Rainy       string
-	Sparkly     string
-	Scanned     string
-	Hundo       string
-	Nundo       string
-	Shinies     string
-	Grunt       string
-	Leader      string
-	Giovanni    string
-	Kecleon     string
-	Showcase    string
-	Route       string
-	Level1      string
-	Level3      string
-	Level4      string
-	Level5      string
-	Mega        string
-	Elite       string
-	Items       string
-	Encounter   string
-	Stardust    string
-	MegaEnergy  string
 }

@@ -10,41 +10,40 @@ name = "golbatdbname"
 #Discord bot token
 token = ""
 #channel IDs for Discord that you want the boards posted to, array support infinite channels
-channelIDs = ["yourchannelid","moarchannelids"] 
+channelIDs = ["yourchannelid","moarchannelids"]
 
-[discord.emojis]
-#can be any unicode emojis or custom discord emojis using the full identifier eg :emoij:12345678910 or <:emoji12345678910>
-valor = "🔴"
-mystic = "🔵"
-instinct = "🌕"
-uncontested = "⚪️"
-pokestop = "🛑"
-normal = "🎣"
-glacial = "❄️"
-mossy = "🌿"
-magnetic = "🧲"
-rainy = "💧"
-sparkly = "🏅"
-scanned = "📈"
-hundo = "💯"
-nundo = "🗑️"
-shinies = "✨"
-grunt = "🥉"
-leader = "🥈"
-giovanni = "🥇"
-kecleon = "🟢"
-showcase = "🏆"
-route = "⛳️"
-level1 = "1️⃣"
-level3 = "3️⃣"
-level4 = "4️⃣"
-level5 = "5️⃣"
-mega = "📣"
-elite = "🐲"
-items = "🛒"
-encounter = "😈"
-stardust = "🌟"
-megaenergy = "⚡️"
+[level_emoji]
+"1" = "1️⃣"
+"3" = "3️⃣"
+"4" = "4️⃣"
+"5" = "5️⃣"
+"6" = "📣"
+"9" = "🐲"
+"11" = "⚫"
+"13" = "⚫"
+
+[reward_emoji]
+"2" = "🛒"
+"3" = "🌟"
+"7" = "😈"
+"12" = "⚡️"
+
+[lure_emoji]
+"501" = "🎣"
+"502" = "❄️"
+"503" = "🌿"
+"504" = "🧲"
+"505" = "💧"
+"506" = "🏅"
+
+[rocket_emoji]
+"1" = "🥉"
+"2" = "🥈"
+"3" = "🥇"
+
+[event_emoji]
+"8" = "🟢"
+"9" = "🏆"
 
 [api]
 #golbat url and port
@@ -64,6 +63,7 @@ longitude = 180
 [config]
 #refresh time in seconds that the board will query the db
 refreshInterval = 60
+errorRefreshInterval = 30
 #if set to false active counts will be removed from hundos/nundos and API calls won't be made
 includeActiveCounts = true 
 #Title of the embed

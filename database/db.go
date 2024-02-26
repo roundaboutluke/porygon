@@ -1,240 +1,206 @@
 package database
 
 import (
-	"database/sql"
 	"fmt"
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/jmoiron/sqlx"
 
-	"Porygon/config"
-	"Porygon/pokemon"
+	"porygon/config"
 )
 
-var DB *sql.DB
+type GymStats struct {
+	Valor       int
+	Mystic      int
+	Instinct    int
+	Uncontested int
+}
 
-func DbConn(config config.Config) (*sql.DB, error) {
-	DB, err := sql.Open("mysql", config.Database.Username+":"+config.Database.Password+"@tcp("+config.Database.Host+":"+config.Database.Port+")/"+config.Database.Name)
+type PokeStats struct {
+	Scanned      int
+	Hundo        int
+	Nundo        int
+	Shiny        int
+	ShinySpecies int
+}
+
+type RaidStats struct {
+	Level int
+	Raid  int
+	Egg   int
+}
+
+type TypeCountStats struct {
+	Type  int
+	Count int
+}
+
+func DbConn(config config.Config) (*sqlx.DB, error) {
+	DB, err := sqlx.Open("mysql", config.Database.Username+":"+config.Database.Password+"@tcp("+config.Database.Host+":"+config.Database.Port+")/"+config.Database.Name)
 	return DB, err
 }
 
-func PokeStats(db *sql.DB, config config.Config) (int, int, int, int, int, error) {
-	var scannedCount, hundoCount, nundoCount, shinyCount, shinySpeciesCount int
-	var err error
+func GetPokeStats(db *sqlx.DB) (PokeStats, error) {
+	pokeStats := PokeStats{}
 
-	err = db.QueryRow("SELECT COALESCE(SUM(count), 0) FROM pokemon_stats WHERE date = CURDATE()").Scan(&scannedCount)
+	err := db.Get(&pokeStats, `
+		SELECT 
+			(SELECT COALESCE(SUM(count), 0) FROM pokemon_stats WHERE date = CURDATE()) AS scanned,
+			(SELECT COALESCE(SUM(count), 0) FROM pokemon_hundo_stats WHERE date = CURDATE()) AS hundo,
+			(SELECT COALESCE(SUM(count), 0) FROM pokemon_nundo_stats WHERE date = CURDATE()) AS nundo,
+			(SELECT COALESCE(SUM(count), 0) FROM pokemon_shiny_stats WHERE date = CURDATE()) AS shiny,
+			(SELECT COUNT(DISTINCT pokemon_id) FROM pokemon_shiny_stats WHERE date = CURDATE()) AS shinyspecies
+	`)
 	if err != nil {
-		return scannedCount, hundoCount, nundoCount, shinyCount, shinySpeciesCount, err
+		return PokeStats{}, err
 	}
 
-	err = db.QueryRow("SELECT COALESCE(SUM(count), 0) FROM pokemon_hundo_stats WHERE date = CURDATE()").Scan(&hundoCount)
-	if err != nil {
-		return scannedCount, hundoCount, nundoCount, shinyCount, shinySpeciesCount, err
-	}
-
-	err = db.QueryRow("SELECT COALESCE(SUM(count), 0) FROM pokemon_nundo_stats WHERE date = CURDATE()").Scan(&nundoCount)
-	if err != nil {
-		return scannedCount, hundoCount, nundoCount, shinyCount, shinySpeciesCount, err
-	}
-
-	err = db.QueryRow("SELECT COALESCE(SUM(count), 0) FROM pokemon_shiny_stats WHERE date = CURDATE()").Scan(&shinyCount)
-	if err != nil {
-		return scannedCount, hundoCount, nundoCount, shinyCount, shinySpeciesCount, err
-	}
-
-	err = db.QueryRow("SELECT COUNT(DISTINCT pokemon_id) FROM pokemon_shiny_stats WHERE date = CURDATE()").Scan(&shinySpeciesCount)
-	if err != nil {
-		return scannedCount, hundoCount, nundoCount, shinyCount, shinySpeciesCount, err
-	}
-
-	return scannedCount, hundoCount, nundoCount, shinyCount, shinySpeciesCount, err
+	return pokeStats, nil
 }
 
-func RaidStats(db *sql.DB, config config.Config) (string, error) {
-	raidEggStats := ""
-	var err error
+func GetRaidStats(db *sqlx.DB) ([]RaidStats, error) {
+	var raidStatsList []RaidStats
 
-	raids := []pokemon.Raid{
-		{ID: 1, Emoji: pokemon.FormatEmoji(config.Discord.Emojis.Level1)},
-		{ID: 3, Emoji: pokemon.FormatEmoji(config.Discord.Emojis.Level3)},
-		{ID: 4, Emoji: pokemon.FormatEmoji(config.Discord.Emojis.Level4)},
-		{ID: 5, Emoji: pokemon.FormatEmoji(config.Discord.Emojis.Level5)},
-		{ID: 6, Emoji: pokemon.FormatEmoji(config.Discord.Emojis.Mega)},
-		{ID: 9, Emoji: pokemon.FormatEmoji(config.Discord.Emojis.Elite)},
-	}
-
-	for _, raid := range raids {
-		var activeRaidCount, activeEggCount int
-		if raid.ID == 5 {
-			err = db.QueryRow("SELECT COUNT(*) FROM gym WHERE raid_level IN (5, 8) AND raid_battle_timestamp <= UNIX_TIMESTAMP() AND raid_end_timestamp > UNIX_TIMESTAMP()").Scan(&activeRaidCount)
-			err = db.QueryRow("SELECT COUNT(*) FROM gym WHERE raid_level IN (5, 8) AND raid_battle_timestamp > UNIX_TIMESTAMP() AND (raid_spawn_timestamp IS NULL OR raid_spawn_timestamp <= UNIX_TIMESTAMP())").Scan(&activeEggCount)
-		} else if raid.ID == 6 {
-			err = db.QueryRow("SELECT COUNT(*) FROM gym WHERE raid_level IN (6, 7, 10) AND raid_battle_timestamp <= UNIX_TIMESTAMP() AND raid_end_timestamp > UNIX_TIMESTAMP()").Scan(&activeRaidCount)
-			err = db.QueryRow("SELECT COUNT(*) FROM gym WHERE raid_level IN (6, 7, 10) AND raid_battle_timestamp > UNIX_TIMESTAMP() AND (raid_spawn_timestamp IS NULL OR raid_spawn_timestamp <= UNIX_TIMESTAMP())").Scan(&activeEggCount)
-		} else {
-			err = db.QueryRow("SELECT COUNT(*) FROM gym WHERE raid_level = ? AND raid_battle_timestamp <= UNIX_TIMESTAMP() AND raid_end_timestamp > UNIX_TIMESTAMP()", raid.ID).Scan(&activeRaidCount)
-			err = db.QueryRow("SELECT COUNT(*) FROM gym WHERE raid_level = ? AND raid_battle_timestamp > UNIX_TIMESTAMP() AND (raid_spawn_timestamp IS NULL OR raid_spawn_timestamp <= UNIX_TIMESTAMP())", raid.ID).Scan(&activeEggCount)
-		}
-
-		if err != nil {
-			return raidEggStats, err
-		}
-		if activeRaidCount > 0 || activeEggCount > 0 {
-			raidEggStats += fmt.Sprintf("%s Hatched: %d | Eggs: %d\n", raid.Emoji, activeRaidCount, activeEggCount)
-
-		}
-	}
-	return raidEggStats, err
-
-}
-
-func GymStats(db *sql.DB, config config.Config) (string, error) {
-	gymStats := ""
-	var err error
-
-	teams := []pokemon.Team{
-		{ID: 1, Emoji: pokemon.FormatEmoji(config.Discord.Emojis.Valor)},
-		{ID: 2, Emoji: pokemon.FormatEmoji(config.Discord.Emojis.Mystic)},
-		{ID: 3, Emoji: pokemon.FormatEmoji(config.Discord.Emojis.Instinct)},
-		{ID: 0, Emoji: pokemon.FormatEmoji(config.Discord.Emojis.Uncontested)},
-	}
-
-	for _, team := range teams {
-		var count int
-		err = db.QueryRow("SELECT COUNT(*) FROM gym WHERE team_id = ? AND updated > UNIX_TIMESTAMP() - 4 * 60 * 60", team.ID).Scan(&count)
-
-		// not sure behaviour if error, is Sprintf count still okay? temp add error nil
-		if err != nil {
-			return gymStats, err
-		}
-
-		gymStats += fmt.Sprintf("%s %d ", team.Emoji, count)
-	}
-	return gymStats, err
-}
-
-func PokestopStats(db *sql.DB, config config.Config) (string, error) {
-	pokestopStats := ""
-	var err error
-
-	pokestops := []pokemon.Pokestop{
-		{ID: 1, Emoji: pokemon.FormatEmoji(config.Discord.Emojis.Pokestop)},
-		// Add more if needed
-	}
-
-	for _, pokestop := range pokestops {
-		var count int
-		err = db.QueryRow("SELECT COUNT(*) FROM pokestop WHERE quest_expiry > UNIX_TIMESTAMP()").Scan(&count)
-
-		if err != nil {
-			return pokestopStats, err
-		}
-
-		pokestopStats += fmt.Sprintf("%s %d ", pokestop.Emoji, count)
-	}
-
-	return pokestopStats, err
-}
-
-func RewardStats(db *sql.DB, config config.Config) (string, error) {
-	rewardStats := ""
-	var err1, err2 error
-
-	rewards := []pokemon.Reward{
-		{ID: 2, Emoji: pokemon.FormatEmoji(config.Discord.Emojis.Items)},
-		{ID: 7, Emoji: pokemon.FormatEmoji(config.Discord.Emojis.Encounter)},
-		{ID: 3, Emoji: pokemon.FormatEmoji(config.Discord.Emojis.Stardust)},
-		{ID: 12, Emoji: pokemon.FormatEmoji(config.Discord.Emojis.MegaEnergy)},
-	}
-	for _, reward := range rewards {
-		var count1, count2 int
-		err1 = db.QueryRow("SELECT COUNT(*) FROM pokestop WHERE quest_reward_type = ? AND quest_expiry > UNIX_TIMESTAMP()", reward.ID).Scan(&count1)
-		err2 = db.QueryRow("SELECT COUNT(*) FROM pokestop WHERE alternative_quest_reward_type = ? AND quest_expiry > UNIX_TIMESTAMP()", reward.ID).Scan(&count2)
-
-		if err1 != nil {
-			return rewardStats, err1
-		}
-
-		if err2 != nil {
-			return rewardStats, err2
-		}
-
-		count := count1 + count2
-		rewardStats += fmt.Sprintf("%s %d ", reward.Emoji, count)
-	}
-	return rewardStats, nil
-}
-
-func LureStats(db *sql.DB, config config.Config) (string, error) {
-	lureStats := ""
-	var err error
-
-	lures := []pokemon.Lure{
-		{ID: 501, Emoji: pokemon.FormatEmoji(config.Discord.Emojis.Normal)},
-		{ID: 502, Emoji: pokemon.FormatEmoji(config.Discord.Emojis.Glacial)},
-		{ID: 503, Emoji: pokemon.FormatEmoji(config.Discord.Emojis.Mossy)},
-		{ID: 504, Emoji: pokemon.FormatEmoji(config.Discord.Emojis.Magnetic)},
-		{ID: 505, Emoji: pokemon.FormatEmoji(config.Discord.Emojis.Rainy)},
-		{ID: 506, Emoji: pokemon.FormatEmoji(config.Discord.Emojis.Sparkly)},
-	}
-
-	for _, lure := range lures {
-		var count int
-		err = db.QueryRow("SELECT COUNT(*) FROM pokestop WHERE lure_id = ? AND lure_expire_timestamp > UNIX_TIMESTAMP()", lure.ID).Scan(&count)
-		if err != nil {
-			return lureStats, err
-		}
-
-		lureStats += fmt.Sprintf("%s %d ", lure.Emoji, count)
-	}
-
-	return lureStats, err
-}
-
-func RocketStats(db *sql.DB, config config.Config) (string, error) {
-	rocketStats := ""
-	var err error
-
-	rocketIncidents := []pokemon.Incident{
-		{ID: 1, Emoji: pokemon.FormatEmoji(config.Discord.Emojis.Grunt)},
-		{ID: 2, Emoji: pokemon.FormatEmoji(config.Discord.Emojis.Leader)},
-		{ID: 3, Emoji: pokemon.FormatEmoji(config.Discord.Emojis.Giovanni)},
-	}
-	for _, incident := range rocketIncidents {
-		var count int
-		err = db.QueryRow("SELECT COUNT(*) FROM incident WHERE display_type = ? AND expiration > UNIX_TIMESTAMP()", incident.ID).Scan(&count)
-		if err != nil {
-			return rocketStats, err
-		}
-
-		rocketStats += fmt.Sprintf("%s %d ", incident.Emoji, count)
-	}
-
-	return rocketStats, err
-}
-
-func OtherStats(db *sql.DB, config config.Config) (string, string, string, error) {
-	var kecleonStats, showcaseStats, activeRoutesStats string
-	var err error
-
-	var kecleonCount int
-	err = db.QueryRow("SELECT COUNT(*) FROM incident WHERE display_type = ? AND expiration > UNIX_TIMESTAMP()", 8).Scan(&kecleonCount)
+	query := `
+        SELECT 
+            raid_level AS level,
+            SUM(CASE WHEN raid_end_timestamp > UNIX_TIMESTAMP() THEN 1 ELSE 0 END) AS raid,
+            SUM(CASE WHEN raid_battle_timestamp > UNIX_TIMESTAMP() AND (raid_spawn_timestamp IS NULL OR raid_spawn_timestamp <= UNIX_TIMESTAMP()) THEN 1 ELSE 0 END) AS egg
+        FROM 
+            gym
+        GROUP BY 
+            raid_level
+        HAVING 
+            raid > 0 OR egg > 0
+    `
+	err := db.Select(&raidStatsList, query)
 	if err != nil {
-		return kecleonStats, showcaseStats, activeRoutesStats, err
+		fmt.Println(err)
+		return nil, err
 	}
-	kecleonStats = fmt.Sprintf("%s %d ", pokemon.FormatEmoji(config.Discord.Emojis.Kecleon), kecleonCount)
 
-	var showcaseCount int
-	err = db.QueryRow("SELECT COUNT(*) FROM incident WHERE display_type = ? AND expiration > UNIX_TIMESTAMP()", 9).Scan(&showcaseCount)
+	return raidStatsList, nil
+}
+
+func GetGymStats(db *sqlx.DB) (GymStats, error) {
+	gymStats := GymStats{}
+	var err error
+	err = db.Get(&gymStats, `
+		SELECT 
+            SUM(CASE WHEN team_id = 0 THEN 1 ELSE 0 END) AS uncontested,
+            SUM(CASE WHEN team_id = 1 THEN 1 ELSE 0 END) AS valor,
+            SUM(CASE WHEN team_id = 2 THEN 1 ELSE 0 END) AS mystic,
+            SUM(CASE WHEN team_id = 3 THEN 1 ELSE 0 END) AS instinct
+		FROM 
+			gym 
+		WHERE 
+			updated > UNIX_TIMESTAMP() - 4 * 60 * 60
+	`)
+
 	if err != nil {
-		return kecleonStats, showcaseStats, activeRoutesStats, err
+		fmt.Println(err)
+		return GymStats{}, err
 	}
-	showcaseStats = fmt.Sprintf("%s %d ", pokemon.FormatEmoji(config.Discord.Emojis.Showcase), showcaseCount)
 
-	var activeRoutesCount int
-	err = db.QueryRow("SELECT COUNT(*) FROM route WHERE type = 1").Scan(&activeRoutesCount)
+	return gymStats, nil
+}
+
+func GetPokestopStats(db *sqlx.DB) (int, error) {
+	var totalCount int
+	err := db.QueryRow("SELECT COUNT(*) FROM pokestop WHERE quest_expiry > UNIX_TIMESTAMP()").Scan(&totalCount)
 	if err != nil {
-		return kecleonStats, showcaseStats, activeRoutesStats, err
+		return 0, err
 	}
-	activeRoutesStats = fmt.Sprintf("%s %d ", pokemon.FormatEmoji(config.Discord.Emojis.Route), activeRoutesCount)
+	return totalCount, nil
+}
 
-	return kecleonStats, showcaseStats, activeRoutesStats, err
+func GetRewardStats(db *sqlx.DB) ([]TypeCountStats, error) {
+	var rewardStatsList []TypeCountStats
+
+	err := db.Select(&rewardStatsList, `
+		SELECT reward_type as type, SUM(count) AS count
+		FROM (
+			SELECT quest_reward_type AS reward_type, COUNT(*) AS count
+			FROM pokestop
+			WHERE quest_expiry > UNIX_TIMESTAMP()
+			GROUP BY quest_reward_type
+			UNION ALL
+			SELECT alternative_quest_reward_type AS reward_type, COUNT(*) AS count
+			FROM pokestop
+			WHERE quest_expiry > UNIX_TIMESTAMP()
+			GROUP BY alternative_quest_reward_type
+		) AS subquery
+		GROUP BY reward_type
+    `)
+	if err != nil {
+		fmt.Println(err)
+		return rewardStatsList, err
+	}
+
+	return rewardStatsList, nil
+}
+
+func GetLureStats(db *sqlx.DB) ([]TypeCountStats, error) {
+	var lureStatsList []TypeCountStats
+
+	err := db.Select(&lureStatsList, `
+		SELECT 
+		    lure_id as type, COUNT(*) as count
+		FROM 
+		    pokestop
+		WHERE
+		    lure_expire_timestamp > UNIX_TIMESTAMP()
+		GROUP BY lure_id
+    `)
+	if err != nil {
+		return lureStatsList, err
+	}
+
+	return lureStatsList, nil
+}
+
+func GetRocketStats(db *sqlx.DB) ([]TypeCountStats, error) {
+	var rocketStatsList []TypeCountStats
+
+	err := db.Select(&rocketStatsList, `
+		SELECT 
+		    display_type as type, COUNT(*) as count
+		FROM
+		    incident
+		WHERE
+		    expiration > UNIX_TIMESTAMP() AND display_type < 8
+		GROUP BY display_type
+    `)
+	if err != nil {
+		return rocketStatsList, err
+	}
+
+	return rocketStatsList, nil
+}
+
+func GetEventStats(db *sqlx.DB) ([]TypeCountStats, error) {
+	var eventStatsList []TypeCountStats
+
+	err := db.Select(&eventStatsList, `
+		SELECT 
+		    display_type as type, COUNT(*) as count
+		FROM
+		    incident
+		WHERE
+		    expiration > UNIX_TIMESTAMP() AND display_type >= 8
+		GROUP BY display_type
+    `)
+	if err != nil {
+		return eventStatsList, err
+	}
+
+	return eventStatsList, nil
+}
+
+func GetRoutesStats(db *sqlx.DB) (int, error) {
+	var totalCount int
+	err := db.QueryRow("SELECT COUNT(*) FROM route WHERE type = 1").Scan(&totalCount)
+	if err != nil {
+		return 0, err
+	}
+	return totalCount, nil
 }
