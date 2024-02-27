@@ -24,7 +24,7 @@ I tried to heed this warning as best I could, providing min/max lon/lat config o
 1. Git clone the repo `git clone https://github.com/roundaboutluke/porygon.git`
 2. `cp default.toml config.toml` & adjust config.toml accordingly
 3. `go build .`
-4. `pm2 start ./Porygon --name porygon`
+5. `pm2 start ./porygon --name porygon`
 
 # updating
 
