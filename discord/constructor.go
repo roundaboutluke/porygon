@@ -60,6 +60,12 @@ func hasValues(data interface{}) bool {
 				if hasValues(fieldValue.Interface()) {
 					return true
 				}
+			case reflect.Slice:
+				for j := 0; j < fieldValue.Len(); j++ {
+					if hasValues(fieldValue.Index(j).Interface()) {
+						return true
+					}
+				}
 			default:
 				return true
 			}
