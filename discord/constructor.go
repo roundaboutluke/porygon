@@ -37,7 +37,7 @@ func humanizeValue(value int) string {
 func convertToEmoji(level int, config map[string]string) string {
 	replacement, ok := config[strconv.Itoa(level)]
 	if !ok {
-		return fmt.Sprintf("Rocket %d", level)
+		return fmt.Sprintf("[%d]", level)
 	}
 	return replacement
 }
