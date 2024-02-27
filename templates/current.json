@@ -33,7 +33,7 @@
     "value": "{{ range .RaidEgg }}{{ LevelEmoji .Level }} Hatched: {{ Humanize .Raid }} | Eggs: {{ Humanize .Egg }}\n{{ end }}"
   },
   {{ end }}
-  {{ if HasValues .Pokestop }}
+  {{ if .Pokestop }}
   {
     "name": "PokéStops Scanned",
     "value": "\uD83D\uDED1 {{ Humanize .Pokestop }}"
@@ -51,15 +51,19 @@
     "value": "{{ range .Lure }}{{ LureEmoji .Type }} {{ Humanize .Count }} {{ end }}"
   },
   {{ end }}
+  {{ if HasValues .Rocket }}
   {
     "name": "Active Rockets",
     "value": "{{ range .Rocket }}{{ RocketEmoji .Type }} {{ Humanize .Count }} {{ end }}"
   },
+  {{ end }}
+  {{ if HasValues .Event }}
   {
     "name": "Event Stops",
     "value": "{{ range .Event }}{{ EventEmoji .Type }} {{ Humanize .Count }} {{ end }}",
     "inline": true
   },
+  {{ end }}
   {
     "name": "Routes",
     "value": "⛳\uFE0F {{ Humanize .Route }}",
