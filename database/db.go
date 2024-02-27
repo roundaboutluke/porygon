@@ -121,12 +121,12 @@ func GetRewardStats(db *sqlx.DB) ([]TypeCountStats, error) {
 		FROM (
 			SELECT quest_reward_type AS reward_type, COUNT(*) AS count
 			FROM pokestop
-			WHERE quest_expiry > UNIX_TIMESTAMP()
+			WHERE quest_expiry > UNIX_TIMESTAMP() AND quest_reward_type IS NOT NULL
 			GROUP BY quest_reward_type
 			UNION ALL
 			SELECT alternative_quest_reward_type AS reward_type, COUNT(*) AS count
 			FROM pokestop
-			WHERE quest_expiry > UNIX_TIMESTAMP()
+			WHERE quest_expiry > UNIX_TIMESTAMP() AND alternative_quest_reward_type IS NOT NULL
 			GROUP BY alternative_quest_reward_type
 		) AS subquery
 		GROUP BY reward_type
