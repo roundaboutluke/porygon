@@ -26,7 +26,11 @@ I tried to heed this warning as best I could, providing min/max lon/lat config o
 3. `go build .`
 5. `pm2 start ./porygon --name porygon`
 
-# updating
+# Further Customisation
+
+Thanks to @lenisko you can now customise Porygon's localisation and layout. Simply `cp templates/current.json templates/current.override.json` and edit accordingly, using the examples in current.json. Note that some of the more generic emojis are contained within this.
+
+# Updating
 
 1. `git pull`
 3. `go build .`
@@ -38,7 +42,7 @@ Porygon requires your bot have the server permissions **Send Messages**, **Read 
 
 # Important
 
-I don't really know what I'm doing which is probably evident to anyone that does looking at my spaghetti, but it works for me so hopefully it does for you too.
+I don't really know what I'm doing which is probably evident to anyone that does looking at my spaghetti, but it works for me so hopefully it does for you too. People that have more of a clue have made some great improvements to the codebase.
 
 # Todo
 
