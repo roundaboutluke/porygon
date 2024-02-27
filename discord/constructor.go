@@ -48,6 +48,13 @@ func hasValues(data interface{}) bool {
 	v := reflect.ValueOf(data)
 
 	switch v.Kind() {
+	case reflect.Slice:
+		for i := 0; i < v.Len(); i++ {
+			if hasValues(v.Index(i).Interface()) {
+				return true
+			}
+		}
+		return false
 	case reflect.Struct:
 		for i := 0; i < v.NumField(); i++ {
 			fieldValue := v.Field(i)
