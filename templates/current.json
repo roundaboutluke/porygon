@@ -27,22 +27,30 @@
     "name": "Gym Statistics",
     "value": "\uD83D\uDD34 {{ Humanize .Gym.Valor }} \uD83D\uDD35 {{ Humanize .Gym.Mystic }} \uD83C\uDF15 {{ Humanize .Gym.Instinct }} ⚪\uFE0F {{ Humanize .Gym.Uncontested }}"
   },
+  {{ if HasValues .RaidEgg }}
   {
     "name": "Active Raids & Eggs",
     "value": "{{ range .RaidEgg }}{{ LevelEmoji .Level }} Hatched: {{ Humanize .Raid }} | Eggs: {{ Humanize .Egg }}\n{{ end }}"
   },
+  {{ end }}
+  {{ if HasValues .Pokestop }}
   {
     "name": "PokéStops Scanned",
     "value": "\uD83D\uDED1 {{ Humanize .Pokestop }}"
   },
+  {{ end }}
+  {{ if HasValues .Reward }}
   {
     "name": "Quest Rewards",
     "value": "{{ range .Reward }}{{ RewardEmoji .Type }} {{ Humanize .Count }} {{ end }}"
   },
+  {{ end }}
+  {{ if HasValues .Lure }}
   {
     "name": "Active Lures",
     "value": "{{ range .Lure }}{{ LureEmoji .Type }} {{ Humanize .Count }} {{ end }}"
   },
+  {{ end }}
   {
     "name": "Active Rockets",
     "value": "{{ range .Rocket }}{{ RocketEmoji .Type }} {{ Humanize .Count }} {{ end }}"

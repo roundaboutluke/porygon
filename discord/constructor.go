@@ -9,6 +9,7 @@ import (
 	"os"
 	"porygon/config"
 	"porygon/database"
+	"reflect"
 	"strconv"
 	"text/template"
 )
@@ -41,6 +42,36 @@ func convertToEmoji(level int, config map[string]string) string {
 	return replacement
 }
 
+func hasValues(data interface{}) bool {
+	// check whatever a provided struct or type, has non-default value
+	// currently supporting struct of integers and integers
+	v := reflect.ValueOf(data)
+
+	switch v.Kind() {
+	case reflect.Struct:
+		for i := 0; i < v.NumField(); i++ {
+			fieldValue := v.Field(i)
+			switch fieldValue.Kind() {
+			case reflect.Int:
+				if fieldValue.Int() != 0 {
+					return true
+				}
+			case reflect.Struct:
+				if hasValues(fieldValue.Interface()) {
+					return true
+				}
+			default:
+				return true
+			}
+		}
+		return false
+	case reflect.Int:
+		return v.Int() != 0
+	default:
+		return false
+	}
+}
+
 func GenerateFields(gathered GatheredStats, config config.Config) []*discordgo.MessageEmbedField {
 	currentTemplateFile, err := os.ReadFile("templates/current.override.json")
 	if err != nil {
@@ -52,6 +83,7 @@ func GenerateFields(gathered GatheredStats, config config.Config) []*discordgo.M
 
 	tmpl, err := template.New("message").Funcs(template.FuncMap{
 		"Humanize":    humanizeValue,
+		"HasValues":   hasValues,
 		"LevelEmoji":  func(level int) string { return convertToEmoji(level, config.LevelEmoji) },
 		"RewardEmoji": func(level int) string { return convertToEmoji(level, config.RewardEmoji) },
 		"LureEmoji":   func(level int) string { return convertToEmoji(level, config.LureEmoji) },
