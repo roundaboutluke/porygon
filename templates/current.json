@@ -1,0 +1,72 @@
+[
+  {
+    "name": "\uD83D\uDCC8 Scanned",
+    "value": "{{ Humanize .Pokemon.Scanned }}"
+  },
+  {
+    "name": "\uD83D\uDCAF Hundos",
+    {{ if .HundoActiveCount }}
+    "value": "Active: {{ Humanize .HundoActiveCount }} | Total: {{ Humanize .Pokemon.Hundo }}"
+    {{ else }}
+    "value": "{{ Humanize .Pokemon.Hundo }}"
+    {{ end }}
+  },
+  {
+    "name": "\uD83D\uDDD1\uFE0F Nundos",
+    {{ if .NundoActiveCount }}
+    "value": "Active: {{ Humanize .NundoActiveCount }} | Total: {{ Humanize .Pokemon.Nundo }}"
+    {{ else }}
+    "value": "{{ Humanize .Pokemon.Nundo }}"
+    {{ end }}
+  },
+  {
+    "name": "✨ Shinies",
+    "value": "Species: {{ Humanize .Pokemon.ShinySpecies }} | Total: {{ Humanize .Pokemon.Shiny }}"
+  },
+  {
+    "name": "Gym Statistics",
+    "value": "\uD83D\uDD34 {{ Humanize .Gym.Valor }} \uD83D\uDD35 {{ Humanize .Gym.Mystic }} \uD83C\uDF15 {{ Humanize .Gym.Instinct }} ⚪\uFE0F {{ Humanize .Gym.Uncontested }}"
+  },
+  {{ if HasValues .RaidEgg }}
+  {
+    "name": "Active Raids & Eggs",
+    "value": "{{ range .RaidEgg }}{{ LevelEmoji .Level }} Hatched: {{ Humanize .Raid }} | Eggs: {{ Humanize .Egg }}\n{{ end }}"
+  },
+  {{ end }}
+  {{ if .Pokestop }}
+  {
+    "name": "PokéStops Scanned",
+    "value": "\uD83D\uDED1 {{ Humanize .Pokestop }}"
+  },
+  {{ end }}
+  {{ if HasValues .Reward }}
+  {
+    "name": "Quest Rewards",
+    "value": "{{ range .Reward }}{{ RewardEmoji .Type }} {{ Humanize .Count }} {{ end }}"
+  },
+  {{ end }}
+  {{ if HasValues .Lure }}
+  {
+    "name": "Active Lures",
+    "value": "{{ range .Lure }}{{ LureEmoji .Type }} {{ Humanize .Count }} {{ end }}"
+  },
+  {{ end }}
+  {{ if HasValues .Rocket }}
+  {
+    "name": "Active Rockets",
+    "value": "{{ range .Rocket }}{{ RocketEmoji .Type }} {{ Humanize .Count }} {{ end }}"
+  },
+  {{ end }}
+  {{ if HasValues .Event }}
+  {
+    "name": "Event Stops",
+    "value": "{{ range .Event }}{{ EventEmoji .Type }} {{ Humanize .Count }} {{ end }}",
+    "inline": true
+  },
+  {{ end }}
+  {
+    "name": "Routes",
+    "value": "⛳\uFE0F {{ Humanize .Route }}",
+    "inline": true
+  }
+]
