@@ -1,0 +1,14 @@
+version: '3.7'
+services:
+  porygon:
+    image: ghcr.io/roundaboutluke/porygon:main
+    container_name: porygon
+    restart: unless-stopped
+    volumes:
+      # mount the config.toml file and persistent storage for MessageIDs
+      - ${PWD}/config.toml:/porygon/config.toml
+      - ${PWD}/messageIDs.json:/porygon/messageIDs.json # file must be created before the first start the container (touch messageIDs.json)
+      # optional if you want to use your own template
+      # comment if not needed
+      - ${PWD}/current.override.json:/porygon/templates/current.override.json
+
