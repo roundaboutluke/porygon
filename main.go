@@ -133,44 +133,71 @@ func gatherStats(db *sqlx.DB, config config.Config) (discord.GatheredStats, erro
 }
 
 func main() {
-	var config config.Config
-	if err := config.ParseConfig(); err != nil {
+	var c config.Config
+	if err := c.ParseConfig(); err != nil {
 		panic(err)
 	}
 
 	messageIDs := loadMessageIDs("messageIDs.json")
 
-	dg, err := discordgo.New("Bot " + config.Discord.Token)
+	dg, err := discordgo.New("Bot " + c.Discord.Token)
+	defer dg.Close()
+
 	if err != nil {
 		fmt.Println("error creating Discord session,", err)
 		return
 	}
 
+	fmt.Println("Add slash commands handlers")
+	dg.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+		if h, ok := discord.CommandHandlers[i.ApplicationCommandData().Name]; ok {
+			h(s, i)
+		}
+	})
+
+	fmt.Println("Open Discord connection")
+	err = dg.Open()
+	if err != nil {
+		fmt.Println("error opening connection,", err)
+		return
+	}
+
+	fmt.Println("Register commands")
+	registeredCommands := make([]*discordgo.ApplicationCommand, len(discord.Commands))
+	for i, v := range discord.Commands {
+		cmd, err := dg.ApplicationCommandCreate(dg.State.User.ID, "", v)
+		if err != nil {
+			fmt.Printf("Cannot create '%v' command: %v\n", v.Name, err)
+		}
+		registeredCommands[i] = cmd
+	}
+
+	fmt.Println("Start loop")
 	go func() {
 		for {
-			db, err := database.DbConn(config)
+			db, err := database.DbConn(c)
 			if err != nil {
 				fmt.Println("error connecting to MariaDB,", err)
-				time.Sleep(time.Duration(config.Config.ErrorRefreshInterval) * time.Second)
+				time.Sleep(time.Duration(c.Config.ErrorRefreshInterval) * time.Second)
 				continue
 			}
-			gathered, err := gatherStats(db, config)
+			gathered, err := gatherStats(db, c)
 			db.Close()
 			if err != nil {
 				fmt.Println("failed to fetch stats,", err)
-				time.Sleep(time.Duration(config.Config.ErrorRefreshInterval) * time.Second)
+				time.Sleep(time.Duration(c.Config.ErrorRefreshInterval) * time.Second)
 				continue
 			}
 
-			fields := discord.GenerateFields(gathered, config)
+			fields := discord.GenerateFields(gathered, c)
 
 			embed := &discordgo.MessageEmbed{
-				Title:     config.Config.EmbedTitle,
+				Title:     c.Config.EmbedTitle,
 				Fields:    fields,
 				Timestamp: time.Now().Format(time.RFC3339),
 			}
 
-			for _, channelID := range config.Discord.ChannelIDs {
+			for _, channelID := range c.Discord.ChannelIDs {
 				var msg *discordgo.Message
 				var err error
 				var msgID string
@@ -194,15 +221,9 @@ func main() {
 				}
 			}
 
-			time.Sleep(time.Duration(config.Config.RefreshInterval) * time.Second)
+			time.Sleep(time.Duration(c.Config.RefreshInterval) * time.Second)
 		}
 	}()
-
-	err = dg.Open()
-	if err != nil {
-		fmt.Println("error opening connection,", err)
-		return
-	}
 
 	fmt.Println("Porygon is now running. Press CTRL-C to exit.")
 	<-make(chan struct{})
