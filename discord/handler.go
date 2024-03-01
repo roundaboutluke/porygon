@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"github.com/bwmarrin/discordgo"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -55,12 +56,29 @@ func listEmotes(s *discordgo.Session, i *discordgo.InteractionCreate) {
 }
 
 func createEmotes(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	emotesDir := "emojis"
 	var output strings.Builder
+	output.WriteString("```")
 
-	files, err := os.ReadDir(emotesDir)
+	_ = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Flags: discordgo.MessageFlagsEphemeral,
+		},
+	})
+
+	emotesDir := "emojis/override"
+	files, err := filepath.Glob(filepath.Join(emotesDir, "*.png"))
+
+	if len(files) > 0 {
+		output.WriteString("Using `emojis/override` directory as emotes source.\n")
+	} else {
+		output.WriteString("Using `emojis` directory as emotes source.\n")
+		emotesDir = "emojis"
+		files, err = filepath.Glob(filepath.Join(emotesDir, "*.png"))
+	}
+
 	if err != nil {
-		fmt.Println("Error reading emotes directory:", err)
+		log.Println("Error reading emotes directory:", err)
 		return
 	}
 
@@ -71,16 +89,15 @@ func createEmotes(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		existingEmotes[emote.Name] = true
 	}
 
-	output.WriteString("```")
 	// check and upload every emote we have under emotesDir
 	for _, file := range files {
-		emoteName := strings.TrimSuffix(file.Name(), ".png")
+		emoteName := strings.TrimSuffix(filepath.Base(file), ".png")
 
 		if _, exists := existingEmotes[emoteName]; exists {
 			output.WriteString(fmt.Sprintf("%s - already there\n", emoteName))
 			continue
 		}
-		emoteFile, err := os.ReadFile(filepath.Join(emotesDir, file.Name()))
+		emoteFile, err := os.ReadFile(filepath.Join(emotesDir, filepath.Base(file)))
 		encodedImage := base64.StdEncoding.EncodeToString(emoteFile)
 		dataURI := fmt.Sprintf("data:image/png;base64,%s", encodedImage)
 
@@ -96,11 +113,7 @@ func createEmotes(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	}
 	output.WriteString("```")
 
-	_ = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{
-			Content: output.String(),
-			Flags:   discordgo.MessageFlagsEphemeral,
-		},
+	_, _ = s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
+		Content: output.String(),
 	})
 }

@@ -2,11 +2,13 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/bwmarrin/discordgo"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
+	"log"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"porygon/api"
@@ -18,7 +20,7 @@ import (
 func saveMessageIDs(filename string, messageIDs map[string]string) {
 	file, err := os.Create(filename)
 	if err != nil {
-		fmt.Println("error creating message IDs file:", err)
+		log.Println("error creating message IDs file:", err)
 		return
 	}
 	defer file.Close()
@@ -32,7 +34,7 @@ func loadMessageIDs(filename string) map[string]string {
 	if _, err := os.Stat(filename); os.IsNotExist(err) {
 		file, err := os.Create(filename)
 		if err != nil {
-			fmt.Println("error creating message IDs file:", err)
+			log.Println("error creating message IDs file:", err)
 			return messageIDs
 		}
 		defer file.Close()
@@ -41,7 +43,7 @@ func loadMessageIDs(filename string) map[string]string {
 	} else {
 		file, err := os.Open(filename)
 		if err != nil {
-			fmt.Println("error opening message IDs file:", err)
+			log.Println("error opening message IDs file:", err)
 			return messageIDs
 		}
 		defer file.Close()
@@ -128,14 +130,15 @@ func gatherStats(db *sqlx.DB, config config.Config) (discord.GatheredStats, erro
 	}
 
 	elapsed := time.Since(start)
-	fmt.Printf("Fetched stats in %s\n", elapsed)
+	log.Printf("Fetched stats in %s\n", elapsed)
 	return gathered, nil
 }
 
 func main() {
 	var c config.Config
+	log.Println("Starting porygon")
 	if err := c.ParseConfig(); err != nil {
-		panic(err)
+		log.Panicln(err)
 	}
 
 	messageIDs := loadMessageIDs("messageIDs.json")
@@ -144,47 +147,48 @@ func main() {
 	defer dg.Close()
 
 	if err != nil {
-		fmt.Println("error creating Discord session,", err)
+		log.Println("error creating Discord session,", err)
 		return
 	}
 
-	fmt.Println("Add slash commands handlers")
+	log.Println("Add slash commands handlers")
 	dg.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		if h, ok := discord.CommandHandlers[i.ApplicationCommandData().Name]; ok {
 			h(s, i)
 		}
 	})
 
-	fmt.Println("Open Discord connection")
+	log.Println("Open Discord connection")
 	err = dg.Open()
 	if err != nil {
-		fmt.Println("error opening connection,", err)
+		log.Println("error opening connection,", err)
 		return
 	}
 
-	fmt.Println("Register commands")
+	log.Println("Register commands")
 	registeredCommands := make([]*discordgo.ApplicationCommand, len(discord.Commands))
 	for i, v := range discord.Commands {
 		cmd, err := dg.ApplicationCommandCreate(dg.State.User.ID, "", v)
 		if err != nil {
-			fmt.Printf("Cannot create '%v' command: %v\n", v.Name, err)
+			log.Printf("Cannot create '%v' command: %v\n", v.Name, err)
 		}
 		registeredCommands[i] = cmd
 	}
 
-	fmt.Println("Start loop")
+	log.Println("Start loop")
 	go func() {
 		for {
 			db, err := database.DbConn(c)
 			if err != nil {
-				fmt.Println("error connecting to MariaDB,", err)
+				log.Println("error connecting to MariaDB,", err)
 				time.Sleep(time.Duration(c.Config.ErrorRefreshInterval) * time.Second)
 				continue
 			}
 			gathered, err := gatherStats(db, c)
 			db.Close()
+
 			if err != nil {
-				fmt.Println("failed to fetch stats,", err)
+				log.Println("failed to fetch stats,", err)
 				time.Sleep(time.Duration(c.Config.ErrorRefreshInterval) * time.Second)
 				continue
 			}
@@ -213,7 +217,7 @@ func main() {
 				}
 
 				if err != nil {
-					fmt.Println("error sending or editing message in channel", channelID, ":", err)
+					log.Println("error sending or editing message in channel", channelID, ":", err)
 					continue
 				} else if msgID == "" || msgID != msg.ID {
 					messageIDs[channelID] = msg.ID
@@ -225,7 +229,10 @@ func main() {
 		}
 	}()
 
-	fmt.Println("Porygon is now running. Press CTRL-C to exit.")
-	<-make(chan struct{})
-	return
+	log.Println("Porygon is now running. Press CTRL-C to exit.")
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
+	<-stop
+
+	log.Println("Received signal. Exiting...")
 }
