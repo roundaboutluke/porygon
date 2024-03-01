@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/bwmarrin/discordgo"
 	"github.com/dustin/go-humanize"
+	"log"
 	"os"
 	"porygon/config"
 	"porygon/database"
@@ -90,7 +91,7 @@ func GenerateFields(gathered GatheredStats, config config.Config) []*discordgo.M
 	if err != nil {
 		currentTemplateFile, err = os.ReadFile("templates/current.json")
 		if err != nil {
-			panic(err)
+			log.Panicln(err)
 		}
 	}
 
@@ -104,17 +105,17 @@ func GenerateFields(gathered GatheredStats, config config.Config) []*discordgo.M
 		"EventEmoji":  func(level int) string { return convertToEmoji(level, config.EventEmoji) },
 	}).Parse(string(currentTemplateFile))
 	if err != nil {
-		panic(err)
+		log.Panicln(err)
 	}
 
 	var resultJSON bytes.Buffer
 	if err := tmpl.Execute(&resultJSON, gathered); err != nil {
-		panic(err)
+		log.Panicln(err)
 	}
 
 	var fields []*discordgo.MessageEmbedField
 	if err := json.Unmarshal(resultJSON.Bytes(), &fields); err != nil {
-		panic(err)
+		log.Panicln(err)
 	}
 
 	return fields

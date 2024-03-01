@@ -1,9 +1,9 @@
 package database
 
 import (
-	"fmt"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
+	"log"
 
 	"porygon/config"
 )
@@ -74,7 +74,7 @@ func GetRaidStats(db *sqlx.DB) ([]RaidStats, error) {
     `
 	err := db.Select(&raidStatsList, query)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return nil, err
 	}
 
@@ -97,7 +97,7 @@ func GetGymStats(db *sqlx.DB) (GymStats, error) {
 	`)
 
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return GymStats{}, err
 	}
 
@@ -132,7 +132,7 @@ func GetRewardStats(db *sqlx.DB) ([]TypeCountStats, error) {
 		GROUP BY reward_type
     `)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return rewardStatsList, err
 	}
 
