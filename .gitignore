@@ -3,4 +3,5 @@ messageIDs.json
 Porygon
 porygon
 templates/*.override.json
+emojis/override/*
 .idea/
