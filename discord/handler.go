@@ -4,7 +4,6 @@ import (
 	"encoding/base64"
 	"fmt"
 	"github.com/bwmarrin/discordgo"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -57,7 +56,6 @@ func listEmotes(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
 func createEmotes(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	var output strings.Builder
-	output.WriteString("```")
 
 	_ = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
@@ -78,40 +76,45 @@ func createEmotes(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	}
 
 	if err != nil {
-		log.Println("Error reading emotes directory:", err)
-		return
-	}
+		output.WriteString(fmt.Sprintf("Error reading emotes directory: %s\n", err))
+	} else {
+		output.WriteString("```")
 
-	// fetch existing emotes
-	guildEmotes, _ := s.GuildEmojis(i.GuildID)
-	existingEmotes := make(map[string]bool)
-	for _, emote := range guildEmotes {
-		existingEmotes[emote.Name] = true
-	}
-
-	// check and upload every emote we have under emotesDir
-	for _, file := range files {
-		emoteName := strings.TrimSuffix(filepath.Base(file), ".png")
-
-		if _, exists := existingEmotes[emoteName]; exists {
-			output.WriteString(fmt.Sprintf("%s - already there\n", emoteName))
-			continue
+		// fetch existing emotes
+		guildEmotes, _ := s.GuildEmojis(i.GuildID)
+		existingEmotes := make(map[string]bool)
+		for _, emote := range guildEmotes {
+			existingEmotes[emote.Name] = true
 		}
-		emoteFile, err := os.ReadFile(filepath.Join(emotesDir, filepath.Base(file)))
-		encodedImage := base64.StdEncoding.EncodeToString(emoteFile)
-		dataURI := fmt.Sprintf("data:image/png;base64,%s", encodedImage)
 
-		_, err = s.GuildEmojiCreate(i.GuildID, &discordgo.EmojiParams{
-			Name:  emoteName,
-			Image: dataURI,
-		})
-		if err != nil {
-			output.WriteString(fmt.Sprintf("%s - upload error: %s\n", emoteName, err))
-			continue
+		if len(files) == 0 {
+			output.WriteString("no files to upload")
 		}
-		output.WriteString(fmt.Sprintf("%s - success\n", emoteName))
+
+		// check and upload every emote we have under emotesDir
+		for _, file := range files {
+			emoteName := strings.TrimSuffix(filepath.Base(file), ".png")
+
+			if _, exists := existingEmotes[emoteName]; exists {
+				output.WriteString(fmt.Sprintf("%s - already there\n", emoteName))
+				continue
+			}
+			emoteFile, err := os.ReadFile(file)
+			encodedImage := base64.StdEncoding.EncodeToString(emoteFile)
+			dataURI := fmt.Sprintf("data:image/png;base64,%s", encodedImage)
+
+			_, err = s.GuildEmojiCreate(i.GuildID, &discordgo.EmojiParams{
+				Name:  emoteName,
+				Image: dataURI,
+			})
+			if err != nil {
+				output.WriteString(fmt.Sprintf("%s - upload error: %s\n", emoteName, err))
+				continue
+			}
+			output.WriteString(fmt.Sprintf("%s - success\n", emoteName))
+		}
+		output.WriteString("```")
 	}
-	output.WriteString("```")
 
 	_, _ = s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
 		Content: output.String(),
