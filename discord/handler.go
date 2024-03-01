@@ -16,13 +16,19 @@ var (
 	Commands = []*discordgo.ApplicationCommand{
 		{
 			Name:                     "list-emotes",
-			Description:              "List emotes",
+			Description:              "List all guild emotes",
 			DefaultMemberPermissions: &defaultMemberPermissions,
 			DMPermission:             &dmPermission,
 		},
 		{
 			Name:                     "create-emotes",
-			Description:              "Create emotes",
+			Description:              "Create Porygon emotes",
+			DefaultMemberPermissions: &defaultMemberPermissions,
+			DMPermission:             &dmPermission,
+		},
+		{
+			Name:                     "delete-emotes",
+			Description:              "Delete all emotes (created by Porygon)",
 			DefaultMemberPermissions: &defaultMemberPermissions,
 			DMPermission:             &dmPermission,
 		},
@@ -31,6 +37,7 @@ var (
 	CommandHandlers = map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){
 		"list-emotes":   listEmotes,
 		"create-emotes": createEmotes,
+		"delete-emotes": deleteEmotes,
 	}
 )
 
@@ -39,11 +46,15 @@ func listEmotes(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
 	guildEmotes, _ := s.GuildEmojis(i.GuildID)
 
-	emotesList.WriteString("```")
-	for _, emote := range guildEmotes {
-		emotesList.WriteString(fmt.Sprintf("<:%s:%s>\n", emote.Name, emote.ID))
+	if len(guildEmotes) > 0 {
+		emotesList.WriteString("```")
+		for _, emote := range guildEmotes {
+			emotesList.WriteString(fmt.Sprintf("<:%s:%s>\n", emote.Name, emote.ID))
+		}
+		emotesList.WriteString("```")
+	} else {
+		emotesList.WriteString("No guild emotes.")
 	}
-	emotesList.WriteString("```")
 
 	_ = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
@@ -51,6 +62,42 @@ func listEmotes(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			Content: emotesList.String(),
 			Flags:   discordgo.MessageFlagsEphemeral,
 		},
+	})
+}
+
+func deleteEmotes(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	var output strings.Builder
+
+	_ = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Flags: discordgo.MessageFlagsEphemeral,
+		},
+	})
+
+	guildEmotes, _ := s.GuildEmojis(i.GuildID)
+
+	if len(guildEmotes) > 0 {
+		output.WriteString("```")
+		for _, emote := range guildEmotes {
+			if emote.User.ID == s.State.User.ID {
+				err := s.GuildEmojiDelete(i.GuildID, emote.ID)
+				if err != nil {
+					output.WriteString(fmt.Sprintf("%s - failed to remove: %s\n", emote.Name, err))
+				} else {
+					output.WriteString(fmt.Sprintf("%s - removed\n", emote.Name))
+				}
+			} else {
+				output.WriteString(fmt.Sprintf("%s - skipping, other owner %s\n", emote.Name, emote.User.String()))
+			}
+		}
+		output.WriteString("```")
+	} else {
+		output.WriteString("No guild emotes to delete.")
+	}
+
+	_, _ = s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
+		Content: output.String(),
 	})
 }
 
