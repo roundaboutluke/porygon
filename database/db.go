@@ -63,8 +63,8 @@ func GetRaidStats(db *sqlx.DB) ([]RaidStats, error) {
 	query := `
         SELECT 
             raid_level AS level,
-            SUM(CASE WHEN raid_end_timestamp > UNIX_TIMESTAMP() THEN 1 ELSE 0 END) AS raid,
-            SUM(CASE WHEN raid_battle_timestamp > UNIX_TIMESTAMP() AND (raid_spawn_timestamp IS NULL OR raid_spawn_timestamp <= UNIX_TIMESTAMP()) THEN 1 ELSE 0 END) AS egg
+            COALESCE(SUM(CASE WHEN raid_end_timestamp > UNIX_TIMESTAMP() THEN 1 ELSE 0 END), 0) AS raid,
+            COALESCE(SUM(CASE WHEN raid_battle_timestamp > UNIX_TIMESTAMP() AND (raid_spawn_timestamp IS NULL OR raid_spawn_timestamp <= UNIX_TIMESTAMP()) THEN 1 ELSE 0 END), 0) AS egg
         FROM 
             gym
         GROUP BY 
@@ -86,10 +86,10 @@ func GetGymStats(db *sqlx.DB) (GymStats, error) {
 	var err error
 	err = db.Get(&gymStats, `
 		SELECT 
-            SUM(CASE WHEN team_id = 0 THEN 1 ELSE 0 END) AS uncontested,
-            SUM(CASE WHEN team_id = 1 THEN 1 ELSE 0 END) AS valor,
-            SUM(CASE WHEN team_id = 2 THEN 1 ELSE 0 END) AS mystic,
-            SUM(CASE WHEN team_id = 3 THEN 1 ELSE 0 END) AS instinct
+			COALESCE(SUM(CASE WHEN team_id = 0 THEN 1 ELSE 0 END), 0) AS uncontested,
+			COALESCE(SUM(CASE WHEN team_id = 1 THEN 1 ELSE 0 END), 0) AS valor,
+			COALESCE(SUM(CASE WHEN team_id = 2 THEN 1 ELSE 0 END), 0) AS mystic,
+			COALESCE(SUM(CASE WHEN team_id = 3 THEN 1 ELSE 0 END), 0) AS instinct
 		FROM 
 			gym 
 		WHERE 
