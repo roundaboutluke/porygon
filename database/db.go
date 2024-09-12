@@ -44,9 +44,9 @@ func GetPokeStats(db *sqlx.DB) (PokeStats, error) {
 
 	err := db.Get(&pokeStats, `
 		SELECT 
-			(SELECT COALESCE(SUM(count), 0) FROM pokemon_stats WHERE date = CURDATE()) AS scanned,
-			(SELECT COALESCE(SUM(count), 0) FROM pokemon_hundo_stats WHERE date = CURDATE()) AS hundo,
-			(SELECT COALESCE(SUM(count), 0) FROM pokemon_nundo_stats WHERE date = CURDATE()) AS nundo,
+			(SELECT COALESCE(SUM(count), 0) FROM pokemon_stats WHERE area = 'world' and date = CURDATE()) AS scanned,
+			(SELECT COALESCE(SUM(count), 0) FROM pokemon_hundo_stats WHERE area = 'world' and date = CURDATE()) AS hundo,
+			(SELECT COALESCE(SUM(count), 0) FROM pokemon_nundo_stats WHERE area = 'world' and date = CURDATE()) AS nundo,
 			(SELECT COALESCE(SUM(count), 0) FROM pokemon_shiny_stats WHERE date = CURDATE()) AS shiny,
 			(SELECT COUNT(DISTINCT pokemon_id) FROM pokemon_shiny_stats WHERE date = CURDATE()) AS shinyspecies
 	`)
