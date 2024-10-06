@@ -1,3 +1,5 @@
+06/10/2024 - I am no longer mapping and thus have no way to continue development/test PRs. Archiving, but works at time of editing. please feel free to fork and maintain. 
+
 # porygon
 **_"Roughly 20 years ago, it was artificially created, utilizing the latest technology of the time."_**
 
